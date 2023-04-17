@@ -1,0 +1,19 @@
+*~
+*.DS_Store
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Distribution / packaging
+build/
+dist/
+
+# Unit test / coverage reports
+.pytest_cache/
+
+# Sphinx documentation
+docs/_build
+
+# Jupyter Notebook
+.ipynb_checkpoints
