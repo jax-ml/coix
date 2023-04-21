@@ -1,0 +1,59 @@
+[project]
+# Project metadata. Available keys are documented at:
+# https://packaging.python.org/en/latest/specifications/declaring-project-metadata
+name = "coix"
+description = "Inference Combinators in JAX"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+authors = [{name = "coix authors", email="coix-dev@google.com"}]
+classifiers = [  # List of https://pypi.org/classifiers/
+    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Science/Research",
+]
+keywords = [
+    "probabilistic machine learning",
+    "bayesian statistics",
+]
+
+# pip dependencies of the project
+# Installed locally with `pip install -e .`
+dependencies = [
+    "jax",
+    "jaxlib",
+    "numpy",
+    "numpyro",
+    "oryx",
+]
+
+# `version` is automatically set by flit to use `coix.__version__`
+dynamic = ["version"]
+
+[project.urls]
+homepage = "https://github.com/jax-ml/coix"
+repository = "https://github.com/jax-ml/coix"
+changelog = "https://github.com/jax-ml/coix/blob/main/CHANGELOG.md"
+# TODO(phandu): documentation = ""
+
+[project.optional-dependencies]
+# Development deps (unittest, linting, formating,...)
+# Installed through `pip install -e .[dev]`
+dev = [
+    "pytest",
+    "pytest-xdist",
+    "pylint>=2.6.0",
+    "pyink",
+]
+
+[tool.pyink]
+# Formatting configuration to follow Google style-guide
+line-length = 80
+preview = true
+pyink-indentation = 2
+pyink-use-majority-quotes = true
+
+[build-system]
+# Build system specify which backend is used to build/install the project (flit,
+# poetry, setuptools,...). All backends are supported by `pip install`
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

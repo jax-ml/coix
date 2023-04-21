@@ -1,19 +1,27 @@
-*~
-*.DS_Store
+# Compiled python modules.
+*.pyc
 
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
+# Byte-compiled
+_pycache__/
+.cache/
 
-# Distribution / packaging
+# Poetry, setuptools, PyPI distribution artifacts.
+/*.egg-info
+.eggs/
 build/
 dist/
+poetry.lock
 
-# Unit test / coverage reports
+# Tests
 .pytest_cache/
 
-# Sphinx documentation
-docs/_build
+# Type checking
+.pytype/
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Other
+*.DS_Store
+*~
+.ipynb_checkpoints/
+
+# PyCharm
+.idea
