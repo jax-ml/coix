@@ -23,9 +23,9 @@ To release a new version (e.g. from `1.0.0` -> `2.0.0`):
 
 ## [Unreleased]
 
-## [0.0.1] - 2023-04-18
+## [0.0.1] - 2023-04-25
 
-* Initial release
+* Initial release for testing (please don't use)
 
 [Unreleased]: https://github.com/jax-ml/coix/compare/v0.0.1...HEAD
 [0.0.1]: https://github.com/jax-ml/coix/releases/tag/v0.0.1
