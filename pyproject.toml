@@ -55,5 +55,5 @@ pyink-use-majority-quotes = true
 [build-system]
 # Build system specify which backend is used to build/install the project (flit,
 # poetry, setuptools,...). All backends are supported by `pip install`
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["flit_core>=3.8,<4"]
+build-backend = "flit_core.buildapi"
