@@ -27,7 +27,9 @@ def traced_evaluate(p, latents=None, seed=None):
   def wrapped(*args, **kwargs):
     data = {} if latents is None else latents
     rng_seed = numpyro.prng_key() if seed is None else seed
-    subs_model = handlers.seed(handlers.substitute(p, data=data), rng_seed=rng_seed)
+    subs_model = handlers.seed(
+        handlers.substitute(p, data=data), rng_seed=rng_seed
+    )
     with handlers.block(), handlers.trace() as tr:
       out = subs_model(*args, **kwargs)
     trace = {}
@@ -38,8 +40,11 @@ def traced_evaluate(p, latents=None, seed=None):
         trace[name] = {"value": value, "log_prob": log_prob}
         if site.get("is_observed", False):
           trace[name]["is_observed"] = True
-    metrics = {name: site["value"] for name, site in tr.items()
-               if site["type"] == "metric"}
+    metrics = {
+        name: site["value"]
+        for name, site in tr.items()
+        if site["type"] == "metric"
+    }
     return out, trace, metrics
 
   return wrapped
@@ -66,6 +71,7 @@ def empirical(out, trace, metrics):
 
 
 class suffix(numpyro.primitives.Messenger):
+
   def process_message(self, msg):
     if msg["type"] == "sample":
       msg["name"] = msg["name"] + "_PREV_"
@@ -84,7 +90,11 @@ class StopGradient(dist.Distribution):
     return jax.lax.stop_gradient(samples) if self.detach_sample else samples
 
   def log_prob(self, value):
-    d = jax.lax.stop_gradient(self.base_dist) if self.detach_args else self.base_dist
+    d = (
+        jax.lax.stop_gradient(self.base_dist)
+        if self.detach_args
+        else self.base_dist
+    )
     return d.log_prob(value)
 
   def tree_flatten(self):
@@ -99,13 +109,14 @@ class StopGradient(dist.Distribution):
 
 
 class detach(numpyro.primitives.Messenger):
+
   def process_message(self, msg):
     if msg["type"] == "sample" and not msg.get("is_observed", False):
       msg["fn"] = StopGradient(msg["fn"], detach_sample=True)
 
 
 class stick_the_landing(numpyro.primitives.Messenger):
+
   def process_message(self, msg):
     if msg["type"] == "sample" and not msg.get("is_observed", False):
       msg["fn"] = StopGradient(msg["fn"], detach_args=True)
-

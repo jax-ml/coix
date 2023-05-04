@@ -35,6 +35,7 @@ import numpyro.distributions as dist
 
 ### Networks
 
+
 class AnnealKernel(nn.Module):
 
   @nn.compact
@@ -53,14 +54,17 @@ class AnnealDensity(nn.Module):
   def __call__(self, x, index=0):
     beta_raw = self.param("beta_raw", lambda _: -jnp.ones(self.M - 2))
     beta = nn.sigmoid(
-        beta_raw[0] + jnp.pad(jnp.cumsum(nn.softplus(beta_raw[1:])), (1, 0)))
+        beta_raw[0] + jnp.pad(jnp.cumsum(nn.softplus(beta_raw[1:])), (1, 0))
+    )
     beta = jnp.pad(beta, (1, 1), constant_values=(0, 1))
     beta_k = beta[index]
 
     angles = 2 * jnp.arange(1, self.M + 1) * jnp.pi / self.M
     mu = 10 * jnp.stack([jnp.sin(angles), jnp.cos(angles)], -1)
     sigma = jnp.sqrt(0.5)
-    target_density = nn.logsumexp(dist.Normal(mu, sigma).log_prob(x).sum(-1), -1)
+    target_density = nn.logsumexp(
+        dist.Normal(mu, sigma).log_prob(x).sum(-1), -1
+    )
     init_proposal = dist.Normal(0, 5).log_prob(x).sum(-1)
     return beta_k * target_density + (1 - beta_k) * init_proposal
 
@@ -70,14 +74,19 @@ class AnnealKernelList(nn.Module):
 
   @nn.compact
   def __call__(self, x, index=0):
-    if self.is_mutable_collection('params'):
+    if self.is_mutable_collection("params"):
       vmap_net = nn.vmap(
-          AnnealKernel, variable_axes={'params': 0}, split_rngs={'params': True})
-      out = vmap_net(name='kernel')(jnp.broadcast_to(x, (self.M - 1,) + x.shape))
+          AnnealKernel, variable_axes={"params": 0}, split_rngs={"params": True}
+      )
+      out = vmap_net(name="kernel")(
+          jnp.broadcast_to(x, (self.M - 1,) + x.shape)
+      )
       return jax.tree_util.tree_map(lambda x: x[index], out)
-    params = self.scope.get_variable('params', 'kernel')
+    params = self.scope.get_variable("params", "kernel")
     params_i = jax.tree_util.tree_map(lambda x: x[index], params)
-    return AnnealKernel(name='kernel').apply(flax.core.freeze({"params": params_i}), x)
+    return AnnealKernel(name="kernel").apply(
+        flax.core.freeze({"params": params_i}), x
+    )
 
 
 class AnnealNetwork(nn.Module):
@@ -94,6 +103,7 @@ class AnnealNetwork(nn.Module):
 
 
 ### Model and kernels
+
 
 def anneal_target(network, key, k=0):
   key_out, key = random.split(key)
@@ -113,6 +123,7 @@ def anneal_reverse(network, key, inputs, k=0):
 
 
 ### Train
+
 
 def make_anneal(params, unroll=False):
   network = coix.util.BindModule(AnnealNetwork(), params)
@@ -148,14 +159,22 @@ def main(args):
   init_params = anneal_net.init(random.PRNGKey(0), jnp.zeros(2))
 
   anneal_params, _ = coix.util.train(
-    partial(loss_fn, num_particles=num_particles, unroll=unroll),
-    init_params, optax.adam(lr), num_steps, jit_compile=True)
+      partial(loss_fn, num_particles=num_particles, unroll=unroll),
+      init_params,
+      optax.adam(lr),
+      num_steps,
+      jit_compile=True,
+  )
 
   rng_keys = random.split(random.PRNGKey(1), 100000).reshape((100, 1000, 2))
-  _, trace, metrics = coix.traced_evaluate(jax.vmap(make_anneal(anneal_params)))(rng_keys)
+  _, trace, metrics = coix.traced_evaluate(
+      jax.vmap(make_anneal(anneal_params))
+  )(rng_keys)
 
   metrics.pop("log_weight")
-  anneal_metrics = jax.tree_util.tree_map(lambda x: round(float(jnp.mean(x)), 4), metrics)
+  anneal_metrics = jax.tree_util.tree_map(
+      lambda x: round(float(jnp.mean(x)), 4), metrics
+  )
   print(anneal_metrics)
 
   plt.figure(figsize=(8, 8))
@@ -171,7 +190,9 @@ if __name__ == "__main__":
   parser.add_argument("--learning-rate", nargs="?", default=1e-3, type=float)
   parser.add_argument("--num-steps", nargs="?", default=20000, type=int)
   parser.add_argument("--unroll-loop", action="store_true")
-  parser.add_argument("--device", default="cpu", type=str, help='use "cpu" or "gpu".')
+  parser.add_argument(
+      "--device", default="cpu", type=str, help='use "cpu" or "gpu".'
+  )
   args = parser.parse_args()
 
   numpyro.set_platform(args.device)

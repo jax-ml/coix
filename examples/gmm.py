@@ -23,6 +23,7 @@ import numpyro.distributions as dist
 
 ### Data
 
+
 def simulate_clusters(num_instances=1, N=60, seed=0):
   np.random.seed(seed)
   tau = np.random.gamma(2, 0.5, (num_instances, 4, 2))
@@ -54,6 +55,7 @@ def load_dataset(split, *, is_training, batch_size):
 
 ### Encoder
 
+
 class GMMEncoderMeanTau(nn.Module):
 
   @nn.compact
@@ -66,10 +68,14 @@ class GMMEncoderMeanTau(nn.Module):
     s, t = jnp.expand_dims(s, -2), jnp.expand_dims(t, -1)
     N = t.sum(-3)
     x = (t * s).sum(-3)
-    x2 = (t * s ** 2).sum(-3)
+    x2 = (t * s**2).sum(-3)
     mu0, nu0, alpha0, beta0 = (0, 0.1, 2, 2)
     alpha = alpha0 + 0.5 * N
-    beta = beta0 + 0.5 * (x2 - x**2 / N) + 0.5 * N * nu0 / (N + nu0) * (x / N - mu0)**2
+    beta = (
+        beta0
+        + 0.5 * (x2 - x**2 / N)
+        + 0.5 * N * nu0 / (N + nu0) * (x / N - mu0) ** 2
+    )
     mu = (mu0 * nu0 + x) / (nu0 + N)
     nu = nu0 + N
     return alpha, beta, mu, nu
@@ -97,9 +103,12 @@ class GMMEncoder(nn.Module):
     alpha, beta, mean, _ = self.encode_initial_mean_tau(x)  # M x D
     tau = alpha / beta  # M x D
 
-    concatenate_fn = lambda x, m, t: jnp.concatenate([x, m, t], axis=-1)  # N x M x 3D
-    xmt = jax.vmap(jax.vmap(
-        concatenate_fn, in_axes=(None, 0, 0)), in_axes=(0, None, None))(x, mean, tau)
+    concatenate_fn = lambda x, m, t: jnp.concatenate(
+        [x, m, t], axis=-1
+    )  # N x M x 3D
+    xmt = jax.vmap(
+        jax.vmap(concatenate_fn, in_axes=(None, 0, 0)), in_axes=(0, None, None)
+    )(x, mean, tau)
     logits = self.encode_c(xmt)  # N x D
     c = jnp.argmax(logits, -1)  # N
 
@@ -145,9 +154,9 @@ def gmm_kernel_c(network, key, inputs):
   key_out, key_c = random.split(key, 2)
 
   concatenate_fn = lambda x, m, t: jnp.concatenate([x, m, t], axis=-1)
-  xmt = jax.vmap(jax.vmap(
-      concatenate_fn, in_axes=(None, 0, 0)), in_axes=(0, None, None))(
-          inputs["x"], inputs["mean"], inputs["tau"])
+  xmt = jax.vmap(
+      jax.vmap(concatenate_fn, in_axes=(None, 0, 0)), in_axes=(0, None, None)
+  )(inputs["x"], inputs["mean"], inputs["tau"])
   logits = network.encode_c(xmt)
   c = coix.rv(dist.Categorical(logits=logits), name="c")(key_c)
 
@@ -162,8 +171,10 @@ def make_gmm(params, num_sweeps):
   network = coix.util.BindModule(GMMEncoder(), params)
   # Add particle dimension and construct a program.
   target = jax.vmap(partial(gmm_target, network))
-  kernels = [jax.vmap(partial(gmm_kernel_mean_tau, network)),
-             jax.vmap(partial(gmm_kernel_c, network))]
+  kernels = [
+      jax.vmap(partial(gmm_kernel_mean_tau, network)),
+      jax.vmap(partial(gmm_kernel_c, network)),
+  ]
   program = coix.algo.apgs(target, kernels, num_sweeps=num_sweeps)
   return program
 
@@ -179,7 +190,9 @@ def loss_fn(params, key, batch, num_sweeps, num_particles):
   # Run the program and get metrics.
   program = make_gmm(params, num_sweeps)
   _, _, metrics = jax.vmap(coix.traced_evaluate(program))(rng_keys, batch)
-  metrics = jax.tree_util.tree_map(partial(jnp.mean, axis=0), metrics)  # mean across batch
+  metrics = jax.tree_util.tree_map(
+      partial(jnp.mean, axis=0), metrics
+  )  # mean across batch
   return metrics["loss"], metrics
 
 
@@ -195,26 +208,38 @@ def main(args):
 
   init_params = GMMEncoder().init(jax.random.PRNGKey(0), jnp.zeros((60, 2)))
   gmm_params, _ = coix.util.train(
-    partial(loss_fn, num_sweeps=num_sweeps, num_particles=num_particles),
-    init_params, optax.adam(lr), num_steps, train_ds)
+      partial(loss_fn, num_sweeps=num_sweeps, num_particles=num_particles),
+      init_params,
+      optax.adam(lr),
+      num_steps,
+      train_ds,
+  )
 
   program = make_gmm(gmm_params, num_sweeps)
   batch, label = next(test_ds)
   batch = jnp.repeat(batch[:, None], num_particles, axis=1)
   rng_keys = jax.vmap(partial(random.split, num=num_particles))(
-      random.split(jax.random.PRNGKey(1), batch.shape[0]))
+      random.split(jax.random.PRNGKey(1), batch.shape[0])
+  )
   _, out = jax.vmap(program)(rng_keys, batch)
 
   fig, axes = plt.subplots(1, 3, figsize=(15, 5))
   for i in range(3):
     n = i
-    axes[i].scatter(batch[n, 0, :, 0], batch[n, 0, :, 1], marker=".",
-                    color=np.array(["c", "m", "y"])[label[n]])
+    axes[i].scatter(
+        batch[n, 0, :, 0],
+        batch[n, 0, :, 1],
+        marker=".",
+        color=np.array(["c", "m", "y"])[label[n]],
+    )
     for j, c in enumerate(["r", "g", "b"]):
-      ellipse = Ellipse(xy=(out["mean"][n, 0, j, 0], out["mean"][n, 0, j, 1]),
-                        width=4 / jnp.sqrt(out["tau"][n, 0, j, 0]),
-                        height=4 / jnp.sqrt(out["tau"][n, 0, j, 1]),
-                        fc=c, alpha=0.3)
+      ellipse = Ellipse(
+          xy=(out["mean"][n, 0, j, 0], out["mean"][n, 0, j, 1]),
+          width=4 / jnp.sqrt(out["tau"][n, 0, j, 0]),
+          height=4 / jnp.sqrt(out["tau"][n, 0, j, 1]),
+          fc=c,
+          alpha=0.3,
+      )
       axes[i].add_patch(ellipse)
   plt.show()
 
@@ -226,7 +251,9 @@ if __name__ == "__main__":
   parser.add_argument("--num_particles", nargs="?", default=10, type=int)
   parser.add_argument("--learning-rate", nargs="?", default=2.5e-4, type=float)
   parser.add_argument("--num-steps", nargs="?", default=200000, type=int)
-  parser.add_argument("--device", default="gpu", type=str, help='use "cpu" or "gpu".')
+  parser.add_argument(
+      "--device", default="gpu", type=str, help='use "cpu" or "gpu".'
+  )
   args = parser.parse_args()
 
   tf.config.experimental.set_visible_devices([], "GPU")  # Disable GPU for TF.

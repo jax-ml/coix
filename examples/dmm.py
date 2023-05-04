@@ -37,12 +37,14 @@ import numpyro.distributions as dist
 
 # Data
 
+
 def simulate_rings(num_instances=1, N=200, seed=0):
   np.random.seed(seed)
   mu = np.random.normal(0, 3, (num_instances, 1, 4, 2))
   angle = np.linspace(0, 2 * np.pi, N // 8, endpoint=False)
   shift = np.random.uniform(
-      0, (2 * np.pi) // (N // 8), size=(num_instances, 1, 2, 4))
+      0, (2 * np.pi) // (N // 8), size=(num_instances, 1, 2, 4)
+  )
   angle = angle[:, None, None] + shift
   angle = angle.reshape((num_instances, N // 4, 4))
   loc = np.stack([np.cos(angle), np.sin(angle)], -1)
@@ -67,6 +69,7 @@ def load_dataset(split, *, is_training, batch_size):
 
 ### Autoencoder
 
+
 class EncoderMu(nn.Module):
 
   @nn.compact
@@ -84,7 +87,7 @@ class EncoderMu(nn.Module):
     st = (s * t).sum(-3) / t.sum(-3)
 
     shape = st.shape[:-1] + (2,)
-    x = jnp.concatenate([st, jnp.zeros(shape), jnp.full(shape, 10.)], -1)
+    x = jnp.concatenate([st, jnp.zeros(shape), jnp.full(shape, 10.0)], -1)
     x = nn.Dense(64)(x)
     x = x.reshape(x.shape[:-1] + (2, 32))
     x = nn.tanh(x)
@@ -196,7 +199,8 @@ def dmm_kernel_c_h(network, key, inputs):
 
   concatenate_fn = lambda x, m: jnp.concatenate([x, m], axis=-1)
   xmu = jax.vmap(jax.vmap(concatenate_fn, (None, 0)), (0, None))(
-      inputs["x"], inputs["mu"])
+      inputs["x"], inputs["mu"]
+  )
   logits = network.encode_c(xmu)
   c = coix.rv(dist.Categorical(logits=logits), name="c")(key_c)
   alpha, beta = network.encode_h(inputs["x"] - inputs["mu"][c])
@@ -208,13 +212,14 @@ def dmm_kernel_c_h(network, key, inputs):
 
 ### Train
 
+
 def make_dmm(params, num_sweeps):
   network = coix.util.BindModule(DMMAutoEncoder(), params)
   # Add particle dimension and construct a program.
   target = jax.vmap(partial(dmm_target, network))
   kernels = [
       jax.vmap(partial(dmm_kernel_mu, network)),
-      jax.vmap(partial(dmm_kernel_c_h, network))
+      jax.vmap(partial(dmm_kernel_c_h, network)),
   ]
   program = coix.algo.apgs(target, kernels, num_sweeps=num_sweeps)
   return program
@@ -231,7 +236,9 @@ def loss_fn(params, key, batch, num_sweeps, num_particles):
   # Run the program and get metrics.
   program = make_dmm(params, num_sweeps)
   _, _, metrics = jax.vmap(coix.traced_evaluate(program))(rng_keys, batch)
-  metrics = jax.tree_util.tree_map(partial(jnp.mean, axis=0), metrics)  # mean across batch
+  metrics = jax.tree_util.tree_map(
+      partial(jnp.mean, axis=0), metrics
+  )  # mean across batch
   return metrics["loss"], metrics
 
 
@@ -245,15 +252,22 @@ def main(args):
   train_ds = load_dataset("train", is_training=True, batch_size=batch_size)
   test_ds = load_dataset("test", is_training=False, batch_size=batch_size)
 
-  init_params = DMMAutoEncoder().init(jax.random.PRNGKey(0), jnp.zeros((200, 2)))
+  init_params = DMMAutoEncoder().init(
+      jax.random.PRNGKey(0), jnp.zeros((200, 2))
+  )
   dmm_params, _ = coix.util.train(
-    partial(loss_fn, num_sweeps=num_sweeps, num_particles=num_particles),
-    init_params, optax.adam(lr), num_steps, train_ds)
+      partial(loss_fn, num_sweeps=num_sweeps, num_particles=num_particles),
+      init_params,
+      optax.adam(lr),
+      num_steps,
+      train_ds,
+  )
 
   program = make_dmm(dmm_params, num_sweeps)
   batch = jnp.repeat(next(test_ds)[:, None], num_particles, axis=1)
   rng_keys = jax.vmap(partial(random.split, num=num_particles))(
-      random.split(jax.random.PRNGKey(1), batch.shape[0]))
+      random.split(jax.random.PRNGKey(1), batch.shape[0])
+  )
   _, out = jax.vmap(program)(rng_keys, batch)
   batch.shape, out["x_recon"].shape
 
@@ -266,13 +280,15 @@ def main(args):
         out["x_recon"][n, 0, :, 1],
         c=out["c"][n, 0],
         cmap="Accent",
-        marker=".")
+        marker=".",
+    )
     axes[1][i].scatter(
         out["mu"][n, 0, :, 0],
         out["mu"][n, 0, :, 1],
         c=range(4),
         marker="x",
-        cmap="Accent")
+        cmap="Accent",
+    )
   plt.show()
 
 
@@ -283,7 +299,9 @@ if __name__ == "__main__":
   parser.add_argument("--num_particles", nargs="?", default=10, type=int)
   parser.add_argument("--learning-rate", nargs="?", default=1e-4, type=float)
   parser.add_argument("--num-steps", nargs="?", default=300000, type=int)
-  parser.add_argument("--device", default="gpu", type=str, help='use "cpu" or "gpu".')
+  parser.add_argument(
+      "--device", default="gpu", type=str, help='use "cpu" or "gpu".'
+  )
   args = parser.parse_args()
 
   tf.config.experimental.set_visible_devices([], "GPU")  # Disable GPU for TF.

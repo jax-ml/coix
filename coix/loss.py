@@ -45,7 +45,8 @@ def apg_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   ]
 
   log_probs = [
-      lp for name, lp in p_log_probs.items()
+      lp
+      for name, lp in p_log_probs.items()
       if (name in forward_sites) or name in observed
   ]
   min_ndim = min(jnp.ndim(lp) for lp in log_probs)
@@ -58,26 +59,31 @@ def apg_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   batch_ndims = len(batch_shape)
 
   global_sites = [
-      name for name, lp in p_log_probs.items()
-      if (not name.endswith("_PREV_")) and
-      (lp.shape[:batch_ndims] != batch_shape)
+      name
+      for name, lp in p_log_probs.items()
+      if (not name.endswith("_PREV_"))
+      and (lp.shape[:batch_ndims] != batch_shape)
   ]
   target_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
       for name, lp in p_log_probs.items()
-      if not (name.endswith("_PREV_") or name in global_sites))
+      if not (name.endswith("_PREV_") or name in global_sites)
+  )
   reverse_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
       for name, lp in p_log_probs.items()
-      if name.endswith("_"))
+      if name.endswith("_")
+  )
   forward_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
       for name, lp in q_log_probs.items()
-      if name in forward_sites)
+      if name in forward_sites
+  )
   proposal_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
       for name, lp in q_log_probs.items()
-      if (name not in forward_sites) and name not in global_sites)
+      if (name not in forward_sites) and name not in global_sites
+  )
 
   surrogate_loss = target_lp + forward_lp
   log_weight = target_lp + reverse_lp - (forward_lp + proposal_lp)
@@ -137,11 +143,13 @@ def fkl_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   proposal_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
       for name, lp in q_log_probs.items()
-      if name in proposal_sites)
+      if name in proposal_sites
+  )
   forward_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
       for name, lp in q_log_probs.items()
-      if name not in proposal_sites)
+      if name not in proposal_sites
+  )
 
   surrogate_loss = forward_lp + proposal_lp
   w1 = jax.lax.stop_gradient(jax.nn.softmax(incoming_log_weight, axis=0))
@@ -178,15 +186,19 @@ def rkl_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   proposal_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
       for name, lp in q_log_probs.items()
-      if name in proposal_sites)
+      if name in proposal_sites
+  )
   target_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
       for name, lp in p_log_probs.items()
-      if name in target_sites)
+      if name in target_sites
+  )
 
   w1 = jax.lax.stop_gradient(jax.nn.softmax(incoming_log_weight, axis=0))
   v = jax.lax.stop_gradient(incremental_log_weight)
-  surrogate_loss = incremental_log_weight + (1 + v - (w1 * v).sum(0)) * proposal_lp
+  surrogate_loss = (
+      incremental_log_weight + (1 + v - (w1 * v).sum(0)) * proposal_lp
+  )
   log_weight = incoming_log_weight + incremental_log_weight
   w = jax.lax.stop_gradient(jax.nn.softmax(log_weight, axis=0))
   loss = -(w1 * surrogate_loss - w * target_lp).sum()
@@ -207,15 +219,18 @@ def rws_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   proposal_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
       for name, lp in q_log_probs.items()
-      if name in proposal_sites)
+      if name in proposal_sites
+  )
   forward_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
       for name, lp in q_log_probs.items()
-      if name not in proposal_sites)
+      if name not in proposal_sites
+  )
   target_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
       for name, lp in p_log_probs.items()
-      if name in target_sites)
+      if name in target_sites
+  )
 
   surrogate_loss = (target_lp - proposal_lp) + forward_lp
   log_weight = incoming_log_weight + incremental_log_weight

@@ -42,30 +42,30 @@ T = 10  # using 10 time steps for training and 20 time steps for testing
 
 
 def load_dataset(*, is_training, batch_size):
-    ds, ds_info = tfds.load("moving_mnist:1.0.0", split="test", with_info=True)
-    ds = ds.cache().repeat()
-    if is_training:
-        ds = ds.shuffle(10 * batch_size, seed=0)
-        map_fn = lambda x: x["image_sequence"][..., :T, :, :, 0] / 255
-    else:
-        map_fn = lambda x: x["image_sequence"][..., 0] / 255
-    ds = ds.batch(batch_size)
-    ds = ds.map(map_fn)
-    return iter(tfds.as_numpy(ds)), ds_info
+  ds, ds_info = tfds.load("moving_mnist:1.0.0", split="test", with_info=True)
+  ds = ds.cache().repeat()
+  if is_training:
+    ds = ds.shuffle(10 * batch_size, seed=0)
+    map_fn = lambda x: x["image_sequence"][..., :T, :, :, 0] / 255
+  else:
+    map_fn = lambda x: x["image_sequence"][..., 0] / 255
+  ds = ds.batch(batch_size)
+  ds = ds.map(map_fn)
+  return iter(tfds.as_numpy(ds)), ds_info
 
 
 def get_digit_mean():
-    ds, ds_info = tfds.load("mnist:3.0.1", split="train", with_info=True)
-    ds = tfds.as_numpy(ds.batch(ds_info.splits["test"].num_examples))
-    digit_mean = next(iter(ds))["image"].squeeze(-1).mean(axis=0)
-    return digit_mean / 255
+  ds, ds_info = tfds.load("mnist:3.0.1", split="train", with_info=True)
+  ds = tfds.as_numpy(ds.batch(ds_info.splits["test"].num_examples))
+  digit_mean = next(iter(ds))["image"].squeeze(-1).mean(axis=0)
+  return digit_mean / 255
 
 
 train_ds, ds_info = load_dataset(is_training=True, batch_size=batch_size)
 test_ds, _ = load_dataset(is_training=False, batch_size=1)
 digit_mean = get_digit_mean()
-frame_size = ds_info.features['image_sequence'].shape[-2]
-frame_length = ds_info.features['image_sequence']._length
+frame_size = ds_info.features["image_sequence"].shape[-2]
+frame_length = ds_info.features["image_sequence"]._length
 print("Frame length: ", frame_length)
 print("Frame size:", frame_size)
 print("Digit shape:", digit_mean.shape)
@@ -73,14 +73,18 @@ print("Digit shape:", digit_mean.shape)
 
 ### Autoencoder
 
+
 def scale_and_translate(image, where, out_size):
   translate = abs(image.shape[-1] - out_size) * (where[..., ::-1] + 1) / 2
   return jax.image.scale_and_translate(
-      image, (out_size, out_size), (0, 1),
+      image,
+      (out_size, out_size),
+      (0, 1),
       jnp.ones(2),
       translate,
       method="cubic",
-      antialias=False)
+      antialias=False,
+  )
 
 
 def crop_frames(frames, z_where, digit_size=28):
@@ -221,7 +225,7 @@ def bmnist_target(network, key, inputs, D=2, T=10):
       "frames_recon": p,
       "z_what": z_what,
       "digits": jax.lax.stop_gradient(digits),
-      **{f"z_where_{t}": z_where[:, t, :] for t in range(T)}
+      **{f"z_where_{t}": z_where[:, t, :] for t in range(T)},
   }
   return key_out, out
 
@@ -233,7 +237,7 @@ def kernel_where(network, key, inputs, D=2, t=0):
   if not isinstance(inputs, dict):
     inputs = {
         "frames": inputs,
-        "digits": jnp.repeat(jnp.expand_dims(network.digit_mean, -3), D, -3)
+        "digits": jnp.repeat(jnp.expand_dims(network.digit_mean, -3), D, -3),
     }
   key_out, key_where = random.split(key)
 
@@ -270,6 +274,7 @@ def kernel_what(network, key, inputs, T=10):
   out = {**inputs, **{"z_what": z_what}}
   return key_out, out
 
+
 _, k2_out = kernel_what(test_network, test_key, p_out, T=frame_length)
 
 
@@ -287,7 +292,10 @@ def make_bmnist(params, T=10):
   kernels.append(jax.vmap(partial(kernel_what, network, T=T)))
   program = coix.algo.apgs(target, kernels, num_sweeps=num_sweeps)
   return program
+
+
 a
+
 
 def loss_fn(params, key, batch):
   # Prepare data for the program.
@@ -307,7 +315,8 @@ def loss_fn(params, key, batch):
 lr = 1e-4
 num_steps = 200000
 bmnist_params, _ = coix.util.train(
-    loss_fn, init_params, optax.adam(lr), num_steps, train_ds)
+    loss_fn, init_params, optax.adam(lr), num_steps, train_ds
+)
 
 
 program = make_bmnist(bmnist_params, T=frame_length)
@@ -332,7 +341,8 @@ def animate(i):
     where = 0.5 * (out[f"z_where_{i}"][n, d] + 1) * (frame_size - 28) - 0.5
     color = colors[d]
     axes[0].add_patch(
-        Rectangle(where, 28, 28, edgecolor=color, lw=3, fill=False))
+        Rectangle(where, 28, 28, edgecolor=color, lw=3, fill=False)
+    )
 
 
 plt.rc("animation", html="jshtml")

@@ -55,8 +55,10 @@ def _use_fori_loop(targets, num_targets, *fns):
       raise ValueError("To use fori_loop, num_targets needs to be specified.")
     for fn in fns:
       if not callable(fn):
-        raise ValueError("To use fori_loop, input programs need to be callable,"
-                         f" but got {type(fn)}.")
+        raise ValueError(
+            "To use fori_loop, input programs need to be callable,"
+            f" but got {type(fn)}."
+        )
     return True
   return False
 
@@ -255,6 +257,7 @@ def nvi_fkl(targets, proposals, *, num_targets=None):
     q = propose(p, compose(detach(fwd), resample(q)), loss_fn=fkl_loss)
   return q
 
+
 def nvi_rkl(targets, forwards, reverses, *, num_targets=None):
   """Nested Variational Inference with reverse KL objective.
 
@@ -281,6 +284,7 @@ def nvi_rkl(targets, forwards, reverses, *, num_targets=None):
     q: the inference program
   """
   if _use_fori_loop(targets, num_targets, forwards, reverses):
+
     def body_fun(i, q):
       p, fwd, rev = targets(i + 1), forwards(i), reverses(i)
       p, q = extend(p, rev), compose(stick_the_landing(fwd), resample(q))

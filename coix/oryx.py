@@ -73,16 +73,19 @@ def _eval_jaxpr_with_state(jaxpr, rules, consts, state, *args):
 
   for eqn in jaxpr.eqns:
     invals = jax.util.safe_map(env.read, eqn.invars)
-    call_jaxpr, params = trace_util.extract_call_jaxpr(eqn.primitive,
-                                                       eqn.params)
+    call_jaxpr, params = trace_util.extract_call_jaxpr(
+        eqn.primitive, eqn.params
+    )
     if eqn.primitive.name == "custom_jvp_call":
       subfuns, bind_params = eqn.primitive.get_bind_params(params)
       ans = eqn.primitive.bind(*subfuns, *invals, **bind_params)
     elif call_jaxpr:
       call_rule = effect_handler._effect_handler_call_rules.get(  # pylint: disable=protected-access
           eqn.primitive,
-          functools.partial(effect_handler.default_call_interpreter_rule,
-                            eqn.primitive))
+          functools.partial(
+              effect_handler.default_call_interpreter_rule, eqn.primitive
+          ),
+      )
       ans, state = call_rule(rules, state, invals, call_jaxpr, **params)
     elif eqn.primitive in rules:
       ans, state = rules[eqn.primitive](state, *invals, **params)
@@ -129,7 +132,8 @@ def rv(dist, *, obs=None, name=None):
         batch_ndims=0,
         distribution_name=dist.__class__.__name__,
         name=name,
-        mode="strict")(sample_fn)(*sample_args)
+        mode="strict",
+    )(sample_fn)(*sample_args)
     return harvest.sow(result, tag=RANDOM_VARIABLE, name=name)
 
   if obs is None:
@@ -214,7 +218,8 @@ def substitute_rule(state, *args, **kwargs):
 
 
 substitute_handler = ppl.make_effect_handler(
-    {random_variable_p: substitute_rule})
+    {random_variable_p: substitute_rule}
+)
 
 
 def substitute(f, latents):
@@ -239,7 +244,8 @@ def distribution_rule(state, *args, **kwargs):
 
 
 distribution_handler = ppl.make_effect_handler(
-    {random_variable_p: distribution_rule})
+    {random_variable_p: distribution_rule}
+)
 
 
 def tag_distribution(f):
@@ -269,10 +275,9 @@ def suffix_rv_rule(state, *args, **kwargs):
   return random_variable_p.bind(*args, **kwargs), state
 
 
-suffix_handler = ppl.make_effect_handler({
-    harvest.sow_p: suffix_rule,
-    random_variable_p: suffix_rv_rule
-})
+suffix_handler = ppl.make_effect_handler(
+    {harvest.sow_p: suffix_rule, random_variable_p: suffix_rv_rule}
+)
 
 
 def suffix(f):
@@ -286,12 +291,13 @@ def suffix(f):
 
 def detach_rule(state, *args, **kwargs):
   """Rule for detach handler."""
-  consts = args[:kwargs["num_consts"]]
-  run_args = args[kwargs["num_consts"]:]
+  consts = args[: kwargs["num_consts"]]
+  run_args = args[kwargs["num_consts"] :]
 
   def _run(*args):
     return jax.lax.stop_gradient(
-        random_variable_p.bind(*itertools.chain(consts, args), **kwargs))
+        random_variable_p.bind(*itertools.chain(consts, args), **kwargs)
+    )
 
   detach_jaxpr, _ = trace_util.stage(_run, dynamic=True)(*run_args)
   kwargs["jaxpr"] = detach_jaxpr.jaxpr
@@ -347,7 +353,6 @@ stl_handler = ppl.make_effect_handler({random_variable_p: stl_rule})
 
 
 def stick_the_landing(f):
-
   def wrapped(*args, **kwargs):
     return stl_handler(f)(None, *args, **kwargs)[0]
 

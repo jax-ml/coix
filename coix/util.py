@@ -150,7 +150,8 @@ def train(
         params, *args, **kwargs
     )
     grads = jax.tree_util.tree_map(
-        lambda x, y: x.astype(y.dtype), grads, params)
+        lambda x, y: x.astype(y.dtype), grads, params
+    )
     zeros_like = lambda g, o, p: (jax.tree_util.tree_map(jnp.zeros_like, g), o)
     updates, opt_state = jax.lax.cond(
         jnp.isfinite(jax.flatten_util.ravel_pytree(grads)[0]).all(),
@@ -210,7 +211,7 @@ def _remove_suffix(name):
   i = 0
   while name.endswith("_PREV_"):
     i += len("_PREV_")
-    name = name[:-len("_PREV_")]
+    name = name[: -len("_PREV_")]
   return name, i
 
 
@@ -228,5 +229,5 @@ def desuffix(trace):
   new_trace = {}
   for name in trace:
     raw_name = names_to_raw_names[name]
-    new_trace[name[:len(name) - num_suffix_min[raw_name]]] = trace[name]
+    new_trace[name[: len(name) - num_suffix_min[raw_name]]] = trace[name]
   return new_trace

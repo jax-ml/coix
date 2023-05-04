@@ -109,7 +109,9 @@ def _get_log_weight(trace, batch_ndims):
 
 
 def _split_key(key):
-  keys = jax.vmap(jax.random.split)(key.reshape(-1, 2)).reshape(key.shape[:-1] + (2, 2))
+  keys = jax.vmap(jax.random.split)(key.reshape(-1, 2)).reshape(
+      key.shape[:-1] + (2, 2)
+  )
   return keys[..., 0, :], keys[..., 1, :]
 
 
@@ -162,7 +164,8 @@ def propose(p, q, *, loss_fn=None, detach=False):
     if "log_weight" in q_metrics:
       in_log_weight = q_metrics["log_weight"]
       in_log_weight = jnp.sum(
-          in_log_weight, axis=tuple(range(batch_ndims - jnp.ndim(in_log_weight), 0))
+          in_log_weight,
+          axis=tuple(range(batch_ndims - jnp.ndim(in_log_weight), 0)),
       )
     else:
       in_log_weight = _get_log_weight(q_trace, batch_ndims)
@@ -183,7 +186,9 @@ def propose(p, q, *, loss_fn=None, detach=False):
     if batch_ndims:  # leftmost dimension is particle dimension
       ess = 1 / (jax.nn.softmax(log_weight, axis=0) ** 2).sum(0)
       metrics["ess"] = ess.mean()
-      log_z = jax.scipy.special.logsumexp(log_weight, 0) - jnp.log(log_weight.shape[0])
+      log_z = jax.scipy.special.logsumexp(log_weight, 0) - jnp.log(
+          log_weight.shape[0]
+      )
       metrics["log_Z"] = log_z.sum()
 
     if loss_fn is not None:
@@ -282,7 +287,8 @@ def resample(q, num_samples=None):
     if "log_weight" in q_metrics:
       in_log_weight = q_metrics.pop("log_weight")
       in_log_weight = jnp.sum(
-          in_log_weight, axis=tuple(range(batch_ndims - jnp.ndim(in_log_weight), 0))
+          in_log_weight,
+          axis=tuple(range(batch_ndims - jnp.ndim(in_log_weight), 0)),
       )
     else:
       in_log_weight = _get_log_weight(trace, batch_ndims)
@@ -290,7 +296,9 @@ def resample(q, num_samples=None):
     k = n if num_samples is None else num_samples
     log_weight = jax.nn.logsumexp(in_log_weight, 0) - jnp.log(k if k else 1)
     if k:
-      metrics["log_weight"] = jnp.broadcast_to(log_weight, (k,) + in_log_weight.shape[1:])
+      metrics["log_weight"] = jnp.broadcast_to(
+          log_weight, (k,) + in_log_weight.shape[1:]
+      )
       metrics["ess"] = jnp.asarray(float(k))
     if "log_Z" not in q_metrics:
       metrics["log_Z"] = log_weight.sum()
@@ -354,10 +362,14 @@ def fori_loop(lower, upper, body_fun, init_program):
   def fn(*args, **kwargs):
     if util.can_extract_key(args):
       key = args[0]
-      trace_fn = lambda fn, key: core.traced_evaluate(fn)(key, *args[1:], **kwargs)
+      trace_fn = lambda fn, key: core.traced_evaluate(fn)(
+          key, *args[1:], **kwargs
+      )
     else:
       key = core.prng_key()
-      trace_fn = lambda fn, key: core.traced_evaluate(fn, seed=key)(*args, **kwargs)
+      trace_fn = lambda fn, key: core.traced_evaluate(fn, seed=key)(
+          *args, **kwargs
+      )
 
     def jax_body_fun(i, val):
       q = core.empirical(*val)

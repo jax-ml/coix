@@ -35,15 +35,17 @@ _COIX_BACKEND = None
 
 
 # pylint:disable=redefined-outer-name
-def register_backend(backend,
-                     traced_evaluate=None,
-                     empirical=None,
-                     suffix=None,
-                     detach=None,
-                     stick_the_landing=None,
-                     rv=None,
-                     factor=None,
-                     prng_key=None):
+def register_backend(
+    backend,
+    traced_evaluate=None,
+    empirical=None,
+    suffix=None,
+    detach=None,
+    stick_the_landing=None,
+    rv=None,
+    factor=None,
+    prng_key=None,
+):
   """Register backend."""
   fn_map = dict(
       traced_evaluate=traced_evaluate,
@@ -53,7 +55,8 @@ def register_backend(backend,
       stick_the_landing=stick_the_landing,
       rv=rv,
       factor=factor,
-      prng_key=prng_key)
+      prng_key=prng_key,
+  )
   _BACKENDS[backend] = fn_map
 
 
@@ -68,8 +71,14 @@ def set_backend(backend):
     module = importlib.import_module(backend)
     fn_map = {}
     for fn in [
-        "traced_evaluate", "empirical", "suffix", "detach",
-        "stick_the_landing", "rv", "factor", "prng_key"
+        "traced_evaluate",
+        "empirical",
+        "suffix",
+        "detach",
+        "stick_the_landing",
+        "rv",
+        "factor",
+        "prng_key",
     ]:
       fn_map[fn] = getattr(module, fn, None)
     register_backend(backend, **fn_map)
@@ -99,7 +108,7 @@ def _remove_suffix(name):
   i = 0
   while name.endswith("_PREV_"):
     i += len("_PREV_")
-    name = name[:-len("_PREV_")]
+    name = name[: -len("_PREV_")]
   return name, i
 
 
@@ -117,7 +126,7 @@ def desuffix(trace):
   new_trace = {}
   for name in trace:
     raw_name = names_to_raw_names[name]
-    new_trace[name[:len(name) - num_suffix_min[raw_name]]] = trace[name]
+    new_trace[name[: len(name) - num_suffix_min[raw_name]]] = trace[name]
   return new_trace
 
 
@@ -184,4 +193,3 @@ def prng_key():
     return fn()
   else:
     return None
-
