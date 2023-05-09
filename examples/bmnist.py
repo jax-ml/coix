@@ -18,24 +18,23 @@ import argparse
 from functools import partial
 import sys
 
-from matplotlib.animation import FuncAnimation
-from matplotlib.patches import Ellipse, Rectangle
-import matplotlib.pyplot as plt
-import numpy as np
-import tensorflow as tf
-import tensorflow_datasets as tfds
-
+import coix
 import flax
 import flax.linen as nn
 import jax
 from jax import random
 import jax.numpy as jnp
+from matplotlib.animation import FuncAnimation
+from matplotlib.patches import Ellipse
+from matplotlib.patches import Rectangle
+import matplotlib.pyplot as plt
+import numpy as np
 import optax
+import tensorflow as tf
+import tensorflow_datasets as tfds
 
-import coix
 import numpyro
 import numpyro.distributions as dist
-
 
 batch_size = 5
 T = 10  # using 10 time steps for training and 20 time steps for testing

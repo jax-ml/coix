@@ -20,6 +20,7 @@ import itertools
 
 import jax
 import jax.numpy as jnp
+
 from oryx.core import ppl
 from oryx.core import primitive
 from oryx.core import trace_util

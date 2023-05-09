@@ -16,6 +16,7 @@
 
 import jax
 import jax.numpy as jnp
+
 import numpyro
 from numpyro import handlers
 import numpyro.distributions as dist
@@ -25,6 +26,7 @@ prng_key = numpyro.prng_key
 
 def traced_evaluate(p, latents=None, seed=None):
   """Performs traced evaluation for a program `p`."""
+
   def wrapped(*args, **kwargs):
     data = {} if latents is None else latents
     rng_seed = numpyro.prng_key() if seed is None else seed
@@ -60,6 +62,7 @@ def add_metric(name, value):
 
 def empirical(out, trace, metrics):
   """A program that produces `out`, `trace`, and `metrics` under evaluation."""
+
   def wrapped(*args, **kwargs):
     del args, kwargs
     for name, site in trace.items():
