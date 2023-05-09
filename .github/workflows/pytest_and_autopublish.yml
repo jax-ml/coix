@@ -29,7 +29,7 @@ jobs:
       run: isort --check .
 
   pytest-job:
-    needs: lint
+    # needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
