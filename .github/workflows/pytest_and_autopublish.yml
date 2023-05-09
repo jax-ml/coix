@@ -17,6 +17,7 @@ jobs:
         python-version: 3.8
 
     - run: pip --version
+    - run: pip install git+https://github.com/jax-ml/oryx.git
     - run: pip install -e .[dev]
     - run: pip freeze
 
