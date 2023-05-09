@@ -23,7 +23,6 @@ dependencies = [
     "jaxlib",
     "numpy",
     "numpyro",
-    "oryx@git+https://github.com/jax-ml/oryx",
 ]
 
 # `version` is automatically set by flit to use `coix.__version__`
@@ -46,6 +45,9 @@ dev = [
     "pytest-xdist",
     "pylint>=2.6.0",
     "pyink",
+]
+oyrx = [
+    "oryx@git+https://github.com/jax-ml/oryx",
 ]
 
 [tool.pyink]
