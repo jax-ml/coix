@@ -26,6 +26,7 @@ import numpy as np
 def get_systematic_resampling_indices(log_weights, rng_key, num_samples):
   """Gets resampling indices based on systematic resampling."""
   n = log_weights.shape[0]
+  # TODO(phandu): It might be more numerical stable if we work in log space.
   weight = jax.nn.softmax(log_weights, axis=0)
   cummulative_weight = weight.cumsum(axis=0)
   cummulative_weight = cummulative_weight / cummulative_weight[-1]
@@ -149,12 +150,12 @@ def train(
         params, *args, **kwargs
     )
     grads = jax.tree_util.tree_map(
-        lambda x, y: x.astype(y.dtype), grads, params)
-    zeros_like = lambda g, o, p: (jax.tree_util.tree_map(jnp.zeros_like, g), o)
+        lambda x, y: x.astype(y.dtype), grads, params
+    )
     updates, opt_state = jax.lax.cond(
         jnp.isfinite(jax.flatten_util.ravel_pytree(grads)[0]).all(),
         optimizer.update,
-        zeros_like,
+        lambda g, o, p: (jax.tree_util.tree_map(jnp.zeros_like, g), o),
         grads,
         opt_state,
         params,
@@ -176,10 +177,10 @@ def train(
     print("Evaluating with the initial params...", flush=True)
     tic = time.time()
     eval_fn(0, params, **kwargs)
-    print("Time to compile an eval step:", time.time() - tic,
-          flush=True)
+    print("Time to compile an eval step:", time.time() - tic, flush=True)
   print("Compiling the first train step...", flush=True)
   tic = time.time()
+  metrics = None
   for step in range(1, num_steps + 1):
     key = random.fold_in(run_key, step)
     args = (key, next(dataloader)) if dataloader is not None else (key,)
@@ -190,8 +191,7 @@ def train(
       if name in metrics:
         kwargs[name] = metrics[name]
     if step == 1:
-      print("Time to compile a train step:", time.time() - tic,
-            flush=True)
+      print("Time to compile a train step:", time.time() - tic, flush=True)
       print("=====", flush=True)
     if (step == num_steps) or (step % log_every == 0):
       log = ("Step {:<" + space + "d}").format(step)
@@ -199,8 +199,34 @@ def train(
         if np.isscalar(value) or (
             isinstance(value, (np.ndarray, jnp.ndarray)) and (value.ndim == 0)
         ):
-          log += " | {} {:10.4f}".format(name, value)
+          log += f" | {name} {value:10.4f}"
       print(log, flush=True)
       if eval_fn is not None:
         eval_fn(step, params, **kwargs)
   return params, metrics
+
+
+def _remove_suffix(name):
+  i = 0
+  while name.endswith("_PREV_"):
+    i += len("_PREV_")
+    name = name[: -len("_PREV_")]
+  return name, i
+
+
+def desuffix(trace):
+  """Remove unnecessary suffix terms added to the trace."""
+  names_to_raw_names = {}
+  num_suffix_min = {}
+  for name in trace:
+    raw_name, num_suffix = _remove_suffix(name)
+    names_to_raw_names[name] = raw_name
+    if raw_name in num_suffix_min:
+      num_suffix_min[raw_name] = min(num_suffix_min[raw_name], num_suffix)
+    else:
+      num_suffix_min[raw_name] = num_suffix
+  new_trace = {}
+  for name in trace:
+    raw_name = names_to_raw_names[name]
+    new_trace[name[: len(name) - num_suffix_min[raw_name]]] = trace[name]
+  return new_trace
