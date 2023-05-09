@@ -24,6 +24,7 @@ prng_key = numpyro.prng_key
 
 
 def traced_evaluate(p, latents=None, seed=None):
+  """Performs traced evaluation for a program `p`."""
   def wrapped(*args, **kwargs):
     data = {} if latents is None else latents
     rng_seed = numpyro.prng_key() if seed is None else seed
@@ -51,6 +52,7 @@ def traced_evaluate(p, latents=None, seed=None):
 
 
 def add_metric(name, value):
+  """A NumPyro primitive to add `metric` type to a program."""
   if numpyro.primitives._PYRO_STACK:  # pylint:disable=protected-access
     msg = {"type": "metric", "value": value, "name": name}
     numpyro.primitives.apply_stack(msg)

@@ -201,6 +201,7 @@ def factor(log_factor, *, name=None):
 # Effect Handlers
 ########################################
 
+
 def _split_list(args, num_consts):
   return jax.util.split_list(args, [num_consts])[1]
 
