@@ -29,12 +29,11 @@ from matplotlib.patches import Ellipse
 from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 import numpy as np
+import numpyro
+import numpyro.distributions as dist
 import optax
 import tensorflow as tf
 import tensorflow_datasets as tfds
-
-import numpyro
-import numpyro.distributions as dist
 
 batch_size = 5
 T = 10  # using 10 time steps for training and 20 time steps for testing

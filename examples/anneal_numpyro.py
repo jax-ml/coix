@@ -27,10 +27,9 @@ from matplotlib.patches import Ellipse
 from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 import numpy as np
-import optax
-
 import numpyro
 import numpyro.distributions as dist
+import optax
 
 ### Networks
 

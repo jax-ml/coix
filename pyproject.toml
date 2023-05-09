@@ -39,6 +39,7 @@ changelog = "https://github.com/jax-ml/coix/blob/main/CHANGELOG.md"
 # Development deps (unittest, linting, formating,...)
 # Installed through `pip install -e .[dev]`
 dev = [
+    "isort",
     "pytest",
     "pytest-xdist",
     "pylint>=2.6.0",
@@ -54,7 +55,7 @@ pyink-use-majority-quotes = true
 
 [tool.isort]
 profile = "google"
-known_third_party = ["coix"]
+known_third_party = ["coix", "numpyro"]
 src_paths = ["examples", "coix"]
 
 [build-system]

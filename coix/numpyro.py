@@ -16,7 +16,6 @@
 
 import jax
 import jax.numpy as jnp
-
 import numpyro
 from numpyro import handlers
 import numpyro.distributions as dist

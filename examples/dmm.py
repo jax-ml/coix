@@ -27,12 +27,11 @@ from matplotlib.patches import Ellipse
 from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 import numpy as np
+import numpyro
+import numpyro.distributions as dist
 import optax
 import tensorflow as tf
 import tensorflow_datasets as tfds
-
-import numpyro
-import numpyro.distributions as dist
 
 # Data
 
