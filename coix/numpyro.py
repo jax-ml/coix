@@ -59,6 +59,7 @@ def add_metric(name, value):
 
 
 def empirical(out, trace, metrics):
+  """A program that produces `out`, `trace`, and `metrics` under evaluation."""
   def wrapped(*args, **kwargs):
     del args, kwargs
     for name, site in trace.items():
