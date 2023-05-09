@@ -39,8 +39,6 @@ changelog = "https://github.com/jax-ml/coix/blob/main/CHANGELOG.md"
 # Installed through `pip install -e .[dev]`
 dev = [
     "isort",
-    "numpyro",
-    "oryx",
     "pytest",
     "pytest-xdist",
     "pylint>=2.6.0",
