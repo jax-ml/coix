@@ -26,7 +26,7 @@ import numpy as np
 def get_systematic_resampling_indices(log_weights, rng_key, num_samples):
   """Gets resampling indices based on systematic resampling."""
   n = log_weights.shape[0]
-  # TODO(phandu): It might be more numerical stable if we work in log space directly.
+  # TODO(phandu): It might be more numerical stable if we work in log space.
   weight = jax.nn.softmax(log_weights, axis=0)
   cummulative_weight = weight.cumsum(axis=0)
   cummulative_weight = cummulative_weight / cummulative_weight[-1]
@@ -152,11 +152,10 @@ def train(
     grads = jax.tree_util.tree_map(
         lambda x, y: x.astype(y.dtype), grads, params
     )
-    zeros_like = lambda g, o, p: (jax.tree_util.tree_map(jnp.zeros_like, g), o)
     updates, opt_state = jax.lax.cond(
         jnp.isfinite(jax.flatten_util.ravel_pytree(grads)[0]).all(),
         optimizer.update,
-        zeros_like,
+        lambda g, o, p: (jax.tree_util.tree_map(jnp.zeros_like, g), o),
         grads,
         opt_state,
         params,
@@ -200,7 +199,7 @@ def train(
         if np.isscalar(value) or (
             isinstance(value, (np.ndarray, jnp.ndarray)) and (value.ndim == 0)
         ):
-          log += " | {} {:10.4f}".format(name, value)
+          log += f" | {name} {value:10.4f}"
       print(log, flush=True)
       if eval_fn is not None:
         eval_fn(step, params, **kwargs)

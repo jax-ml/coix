@@ -16,7 +16,6 @@
 
 import functools
 
-from coix.core import get_backend_name
 from coix.api import compose
 from coix.api import extend
 from coix.api import fori_loop

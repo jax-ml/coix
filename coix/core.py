@@ -47,16 +47,16 @@ def register_backend(
     prng_key=None,
 ):
   """Register backend."""
-  fn_map = dict(
-      traced_evaluate=traced_evaluate,
-      empirical=empirical,
-      suffix=suffix,
-      detach=detach,
-      stick_the_landing=stick_the_landing,
-      rv=rv,
-      factor=factor,
-      prng_key=prng_key,
-  )
+  fn_map = {
+      "traced_evaluate": traced_evaluate,
+      "empirical": empirical,
+      "suffix": suffix,
+      "detach": detach,
+      "stick_the_landing": stick_the_landing,
+      "rv": rv,
+      "factor": factor,
+      "prng_key": prng_key,
+  }
   _BACKENDS[backend] = fn_map
 
 

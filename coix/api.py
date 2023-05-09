@@ -25,12 +25,11 @@ backend supports the following functionality:
 
 import functools
 
+from coix import core
+from coix import util
 import jax
 import jax.numpy as jnp
 import numpy as np
-
-from coix import core
-from coix import util
 
 __all__ = [
     "compose",
@@ -362,14 +361,14 @@ def fori_loop(lower, upper, body_fun, init_program):
   def fn(*args, **kwargs):
     if util.can_extract_key(args):
       key = args[0]
-      trace_fn = lambda fn, key: core.traced_evaluate(fn)(
-          key, *args[1:], **kwargs
-      )
+
+      def trace_fn(fn, key):
+        return core.traced_evaluate(fn)(key, *args[1:], **kwargs)
     else:
       key = core.prng_key()
-      trace_fn = lambda fn, key: core.traced_evaluate(fn, seed=key)(
-          *args, **kwargs
-      )
+
+      def trace_fn(fn, key):
+        return core.traced_evaluate(fn, seed=key)(*args, **kwargs)
 
     def jax_body_fun(i, val):
       q = core.empirical(*val)

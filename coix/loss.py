@@ -14,10 +14,9 @@
 
 """Inference objectives."""
 
+from coix import util
 import jax
 import jax.numpy as jnp
-
-from coix import util
 
 __all__ = [
     "apg_loss",

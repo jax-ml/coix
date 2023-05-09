@@ -24,13 +24,13 @@ from coix.api import memoize
 from coix.api import propose
 from coix.api import resample
 from coix.core import detach
+from coix.core import empirical
 from coix.core import factor
 from coix.core import register_backend
 from coix.core import rv
 from coix.core import set_backend
 from coix.core import stick_the_landing
 from coix.core import traced_evaluate
-from coix.core import empirical
 
 
 __all__ = [

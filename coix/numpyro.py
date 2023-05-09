@@ -17,8 +17,8 @@
 import jax
 import jax.numpy as jnp
 import numpyro
-import numpyro.distributions as dist
 from numpyro import handlers
+import numpyro.distributions as dist
 
 prng_key = numpyro.prng_key
 
@@ -51,13 +51,14 @@ def traced_evaluate(p, latents=None, seed=None):
 
 
 def add_metric(name, value):
-  if numpyro.primitives._PYRO_STACK:
+  if numpyro.primitives._PYRO_STACK:  # pylint:disable=protected-access
     msg = {"type": "metric", "value": value, "name": name}
     numpyro.primitives.apply_stack(msg)
 
 
 def empirical(out, trace, metrics):
   def wrapped(*args, **kwargs):
+    del args, kwargs
     for name, site in trace.items():
       value, lp = site["value"], site["log_prob"]
       event_dim = jnp.ndim(value) - jnp.ndim(lp)
@@ -70,7 +71,7 @@ def empirical(out, trace, metrics):
   return wrapped
 
 
-class suffix(numpyro.primitives.Messenger):
+class suffix(numpyro.primitives.Messenger):  # pylint:disable=invalid-name
 
   def process_message(self, msg):
     if msg["type"] == "sample":
@@ -102,20 +103,20 @@ class StopGradient(dist.Distribution):
     return params, (treedef, self.detach_sample, self.detach_args)
 
   @classmethod
-  def tree_unflatten(cls, aux_data, children):
+  def tree_unflatten(cls, aux_data, params):
     treedef, detach_sample, detach_args = aux_data
-    base_dist = jax.tree_util.tree_unflatten(treedef, children)
+    base_dist = jax.tree_util.tree_unflatten(treedef, params)
     return cls(base_dist, detach_sample=detach_sample, detach_args=detach_args)
 
 
-class detach(numpyro.primitives.Messenger):
+class detach(numpyro.primitives.Messenger):  # pylint:disable=invalid-name
 
   def process_message(self, msg):
     if msg["type"] == "sample" and not msg.get("is_observed", False):
       msg["fn"] = StopGradient(msg["fn"], detach_sample=True)
 
 
-class stick_the_landing(numpyro.primitives.Messenger):
+class stick_the_landing(numpyro.primitives.Messenger):  # pylint:disable=invalid-name
 
   def process_message(self, msg):
     if msg["type"] == "sample" and not msg.get("is_observed", False):

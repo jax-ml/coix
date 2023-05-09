@@ -201,12 +201,15 @@ def factor(log_factor, *, name=None):
 # Effect Handlers
 ########################################
 
+def _split_list(args, num_consts):
+  return jax.util.split_list(args, [num_consts])[1]
+
 
 def substitute_rule(state, *args, **kwargs):
   """Rule for substitute handler."""
   name = kwargs.get("name")
   if name in state:
-    _, flat_args = jax.util.split_list(args, [kwargs["num_consts"]])
+    flat_args = _split_list(args, kwargs["num_consts"])
     _, dist = jax.tree_util.tree_unflatten(kwargs["in_tree"], flat_args)
     value = state[name]
     value = primitive.tie_in(flat_args, value)
@@ -235,7 +238,7 @@ def distribution_rule(state, *args, **kwargs):
   """Rule for distribution handler."""
   name = kwargs.get("name")
   if name is not None:
-    _, flat_args = jax.util.split_list(args, [kwargs["num_consts"]])
+    flat_args = _split_list(args, kwargs["num_consts"])
     _, dist = jax.tree_util.tree_unflatten(kwargs["in_tree"], flat_args)
     dist_flat, dist_tree = jax.tree_util.tree_flatten(dist)
     state[name] = {dist_tree: dist_flat}
@@ -340,7 +343,7 @@ class STLDistribution:
 
 
 def stl_rule(state, *args, **kwargs):
-  _, flat_args = jax.util.split_list(args, [kwargs["num_consts"]])
+  flat_args = _split_list(args, kwargs["num_consts"])
   key, dist = jax.tree_util.tree_unflatten(kwargs["in_tree"], flat_args)
   stl_dist = STLDistribution(dist)
   _, in_tree = jax.tree_util.tree_flatten((key, stl_dist))
