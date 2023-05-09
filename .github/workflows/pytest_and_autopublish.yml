@@ -16,7 +16,6 @@ jobs:
       with:
         python-version: 3.8
 
-    steps:
     - run: pip --version
     - run: pip install -e .[dev]
     - run: pip freeze
@@ -29,7 +28,7 @@ jobs:
       run: isort --check .
 
   pytest-job:
-    # needs: lint
+    needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
