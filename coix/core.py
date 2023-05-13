@@ -131,6 +131,7 @@ def desuffix(trace):
 
 
 def traced_evaluate(p, latents=None, rng_seed=None, **kwargs):
+  """Performs traced evaluation for a program `p`."""
   kwargs = kwargs.copy()
   if rng_seed is not None:
     kwargs["rng_seed"] = rng_seed

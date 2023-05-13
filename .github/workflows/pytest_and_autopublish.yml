@@ -4,7 +4,31 @@ name: Unittests & Auto-publish
 on: [push, workflow_dispatch]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v3
+
+    # Install deps
+    - uses: actions/setup-python@v4
+      with:
+        python-version: 3.8
+
+    - run: pip --version
+    - run: pip install -e .[dev]
+    - run: pip freeze
+
+    - name: Lint with pylint
+      run: pylint coix
+    - name: Lint with pyink
+      run: pyink --check .
+    - name: Lint with isort
+      run: isort --check .
+
   pytest-job:
+    needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -23,9 +47,7 @@ jobs:
         # cache: pip
         # cache-dependency-path: '**/pyproject.toml'
 
-    - run: pip --version
     - run: pip install -e .[dev]
-    - run: pip freeze
 
     # Run tests (in parallel)
     - name: Run core tests

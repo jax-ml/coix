@@ -16,22 +16,20 @@ import argparse
 from functools import partial
 import sys
 
-from matplotlib.animation import FuncAnimation
-from matplotlib.patches import Ellipse, Rectangle
-import matplotlib.pyplot as plt
-import numpy as np
-
+import coix
 import flax
 import flax.linen as nn
 import jax
 from jax import random
 import jax.numpy as jnp
-import optax
-
-import coix
+from matplotlib.animation import FuncAnimation
+from matplotlib.patches import Ellipse
+from matplotlib.patches import Rectangle
+import matplotlib.pyplot as plt
+import numpy as np
 import numpyro
 import numpyro.distributions as dist
-
+import optax
 
 ### Networks
 

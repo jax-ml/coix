@@ -31,7 +31,6 @@ from coix.loss import iwae_loss
 from coix.loss import rkl_loss
 from coix.loss import rws_loss
 
-
 __all__ = [
     "aft",
     "apgs",
@@ -49,6 +48,7 @@ __all__ = [
 
 
 def _use_fori_loop(targets, num_targets, *fns):
+  """Whether or not using rolling fori_loop."""
   if callable(targets):
     if num_targets is None:
       raise ValueError("To use fori_loop, num_targets needs to be specified.")

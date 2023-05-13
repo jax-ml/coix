@@ -95,6 +95,7 @@ def _get_batch_ndims(log_probs):
 
 
 def _get_log_weight(trace, batch_ndims):
+  """Computes log weight of the trace and keeps its batch dimensions."""
   log_weight = jnp.zeros((1,) * batch_ndims)
   for site in trace.values():
     lp = util.get_site_log_prob(site)
@@ -364,6 +365,7 @@ def fori_loop(lower, upper, body_fun, init_program):
 
       def trace_fn(fn, key):
         return core.traced_evaluate(fn)(key, *args[1:], **kwargs)
+
     else:
       key = core.prng_key()
 

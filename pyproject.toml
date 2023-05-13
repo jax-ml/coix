@@ -23,7 +23,6 @@ dependencies = [
     "jaxlib",
     "numpy",
     "numpyro",
-    "oryx",
 ]
 
 # `version` is automatically set by flit to use `coix.__version__`
@@ -39,10 +38,14 @@ changelog = "https://github.com/jax-ml/coix/blob/main/CHANGELOG.md"
 # Development deps (unittest, linting, formating,...)
 # Installed through `pip install -e .[dev]`
 dev = [
+    "isort",
     "pytest",
     "pytest-xdist",
     "pylint>=2.6.0",
     "pyink",
+]
+oyrx = [
+    "oryx@git+https://github.com/jax-ml/oryx",
 ]
 
 [tool.pyink]
@@ -51,6 +54,11 @@ line-length = 80
 preview = true
 pyink-indentation = 2
 pyink-use-majority-quotes = true
+
+[tool.isort]
+profile = "google"
+known_third_party = ["coix", "numpyro"]
+src_paths = ["examples", "coix"]
 
 [build-system]
 # Build system specify which backend is used to build/install the project (flit,
