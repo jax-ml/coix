@@ -14,6 +14,9 @@
 
 """Backend implementation for NumPyro."""
 
+from coix.api import _get_batch_ndims
+from coix.api import _get_log_weight
+from coix.util import get_site_log_prob
 import jax
 import jax.numpy as jnp
 import numpyro
@@ -42,11 +45,18 @@ def traced_evaluate(p, latents=None, seed=None):
         trace[name] = {"value": value, "log_prob": log_prob}
         if site.get("is_observed", False):
           trace[name]["is_observed"] = True
+    # else:
+    # in_log_weight = _get_log_weight(q_trace, batch_ndims)
     metrics = {
         name: site["value"]
         for name, site in tr.items()
         if site["type"] == "metric"
     }
+    # add log_weight to metrics
+    if "log_weight" not in metrics:
+        log_probs = [get_site_log_prob(site) for site in trace.values()]
+        weight = _get_log_weight(trace, _get_batch_ndims(log_probs))
+        metrics = {**metrics, "log_weight": weight}
     return out, trace, metrics
 
   return wrapped

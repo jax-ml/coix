@@ -83,6 +83,7 @@ def extend(p, f):
 
 
 def _get_batch_ndims(log_probs):
+  """Returns the number of same-size leading dimension of the elements in log_probs"""
   if not log_probs:
     return 0
   min_ndim = min(jnp.ndim(lp) for lp in log_probs)
@@ -161,14 +162,12 @@ def propose(p, q, *, loss_fn=None, detach=False):
     log_probs = list(p_log_probs.values()) + list(q_log_probs.values())
     batch_ndims = _get_batch_ndims(log_probs)
 
-    if "log_weight" in q_metrics:
-      in_log_weight = q_metrics["log_weight"]
-      in_log_weight = jnp.sum(
-          in_log_weight,
-          axis=tuple(range(batch_ndims - jnp.ndim(in_log_weight), 0)),
-      )
-    else:
-      in_log_weight = _get_log_weight(q_trace, batch_ndims)
+    assert "log_weight" in q_metrics
+    in_log_weight = q_metrics["log_weight"]
+    in_log_weight = jnp.sum(
+        in_log_weight,
+        axis=tuple(range(batch_ndims - jnp.ndim(in_log_weight), 0)),
+    )
     p_log_weight = sum(
         lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
         for name, lp in p_log_probs.items()
