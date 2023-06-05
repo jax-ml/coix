@@ -54,9 +54,9 @@ def traced_evaluate(p, latents=None, seed=None):
     }
     # add log_weight to metrics
     if "log_weight" not in metrics:
-        log_probs = [get_site_log_prob(site) for site in trace.values()]
-        weight = _get_log_weight(trace, _get_batch_ndims(log_probs))
-        metrics = {**metrics, "log_weight": weight}
+      log_probs = [get_site_log_prob(site) for site in trace.values()]
+      weight = _get_log_weight(trace, _get_batch_ndims(log_probs))
+      metrics = {**metrics, "log_weight": weight}
     return out, trace, metrics
 
   return wrapped

@@ -83,7 +83,9 @@ def extend(p, f):
 
 
 def _get_batch_ndims(log_probs):
-  """Returns the number of same-size leading dimension of the elements in log_probs"""
+  """
+  Returns the number of same-size leading dimension of the elements in log_probs
+  """
   if not log_probs:
     return 0
   min_ndim = min(jnp.ndim(lp) for lp in log_probs)
