@@ -372,6 +372,7 @@ def fori_loop(lower, upper, body_fun, init_program):
 
       def trace_fn(fn, key):
         return core.traced_evaluate(fn)(key, *args[1:], **kwargs)
+
     else:
       key = core.prng_key()
 
