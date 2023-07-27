@@ -56,11 +56,13 @@ ALL_TAGS = (RANDOM_VARIABLE, OBSERVED, DISTRIBUTION, METRIC)
 
 
 # Patch Oryx behavior to handle custom_jvp properly.
-def _process_custom_jvp_call(self, trace, prim, fun, jvp, tracers):
+def _process_custom_jvp_call(
+    self, trace, prim, fun, jvp, tracers, *, symbolic_zeros
+):
   """Patch harvest.ReapContext.process_custom_jvp_call."""
   del self
   vals_in = [t.val for t in tracers]
-  out_flat = prim.bind(fun, jvp, *vals_in)
+  out_flat = prim.bind(fun, jvp, *vals_in, symbolic_zeros=symbolic_zeros)
   out_tracer = jax.util.safe_map(trace.pure, out_flat)
   return out_tracer
 

@@ -28,6 +28,12 @@ dependencies = [
 # `version` is automatically set by flit to use `coix.__version__`
 dynamic = ["version"]
 
+[tool.peotry]
+name = "coix"
+description = "Inference Combinators in JAX"
+authors = [{name = "coix authors", email="coix-dev@google.com"}]
+readme = "README.md"
+
 [project.urls]
 homepage = "https://github.com/jax-ml/coix"
 repository = "https://github.com/jax-ml/coix"
@@ -38,13 +44,17 @@ changelog = "https://github.com/jax-ml/coix/blob/main/CHANGELOG.md"
 # Development deps (unittest, linting, formating,...)
 # Installed through `pip install -e .[dev]`
 dev = [
+    "flax",
     "isort",
+    "matplotlib",
+    "numpyro",
+    "optax",
     "pytest",
     "pytest-xdist",
     "pylint>=2.6.0",
     "pyink",
 ]
-oyrx = [
+oryx = [
     "oryx@git+https://github.com/jax-ml/oryx",
 ]
 
