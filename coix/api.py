@@ -25,8 +25,8 @@ backend supports the following functionality:
 
 import functools
 
-from coix import core
-from coix import util
+import coix.core as core
+import coix.util as util
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -113,6 +113,11 @@ def _split_key(key):
       key.shape[:-1] + (2, 2)
   )
   return keys[..., 0, :], keys[..., 1, :]
+
+
+def _fold_in_key(key, i):
+  key_new = jax.vmap(jax.random.fold_in, (0, None))(key.reshape(-1, 2), i)
+  return key_new.reshape(key.shape)
 
 
 def propose(p, q, *, loss_fn=None, detach=False):
@@ -269,6 +274,8 @@ def resample(q, num_samples=None):
   def fn(*args, **kwargs):
     if util.can_extract_key(args):
       key_r, key_q = _split_key(args[0])
+      # We just need a single key for resampling.
+      key_r = key_r.reshape((-1, 2)).sum(0)
       args = (key_q,) + args[1:]
     else:
       key_r = core.prng_key()
@@ -362,21 +369,17 @@ def fori_loop(lower, upper, body_fun, init_program):
   def fn(*args, **kwargs):
     if util.can_extract_key(args):
       key = args[0]
-
-      def trace_fn(fn, key):
-        return core.traced_evaluate(fn)(key, *args[1:], **kwargs)
-
+      trace_fn = lambda fn, key: core.traced_evaluate(fn)(key, *args[1:], **kwargs)
     else:
       key = core.prng_key()
+      trace_fn = lambda fn, key: core.traced_evaluate(fn, seed=key)(*args, **kwargs)
 
-      def trace_fn(fn, key):
-        return core.traced_evaluate(fn, seed=key)(*args, **kwargs)
+    key_body, key_init = _split_key(key)
 
     def jax_body_fun(i, val):
       q = core.empirical(*val)
-      return trace_fn(body_fun(i, q), jax.random.fold_in(key, i))
+      return trace_fn(body_fun(i, q), _fold_in_key(key_body, i))
 
-    key, key_init = jax.random.split(key)
     v, trace, metrics = trace_fn(init_program, key_init)
     metrics = _add_missing_metrics(metrics, trace)
     output = jax.lax.fori_loop(lower, upper, jax_body_fun, (v, trace, metrics))

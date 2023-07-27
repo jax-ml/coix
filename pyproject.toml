@@ -38,15 +38,17 @@ changelog = "https://github.com/jax-ml/coix/blob/main/CHANGELOG.md"
 # Development deps (unittest, linting, formating,...)
 # Installed through `pip install -e .[dev]`
 dev = [
+    "flax",
     "isort",
+    "matplotlib",
     "numpyro",
-    "oryx",
+    "optax",
     "pytest",
     "pytest-xdist",
     "pylint>=2.6.0",
     "pyink",
 ]
-oyrx = [
+oryx = [
     "oryx@git+https://github.com/jax-ml/oryx",
 ]
 

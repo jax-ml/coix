@@ -143,7 +143,7 @@ def loss_fn(params, key, num_particles, unroll=False):
 
   # Run the program and get metrics.
   program = make_anneal(params, unroll=unroll)
-  _, _, metrics = coix.traced_evaluate(program)(key)
+  _, _, metrics = coix.traced_evaluate(program)(rng_keys)
   return metrics["loss"], metrics
 
 
