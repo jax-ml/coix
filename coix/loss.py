@@ -14,7 +14,7 @@
 
 """Inference objectives."""
 
-import coix.util as util
+from coix import util
 import jax
 import jax.numpy as jnp
 

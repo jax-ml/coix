@@ -53,7 +53,9 @@ ALL_TAGS = (RANDOM_VARIABLE, OBSERVED, DISTRIBUTION, METRIC)
 
 
 # Patch Oryx behavior to handle custom_jvp properly.
-def _process_custom_jvp_call(self, trace, prim, fun, jvp, tracers, *, symbolic_zeros):
+def _process_custom_jvp_call(
+    self, trace, prim, fun, jvp, tracers, *, symbolic_zeros
+):
   """Patch harvest.ReapContext.process_custom_jvp_call."""
   del self
   vals_in = [t.val for t in tracers]
