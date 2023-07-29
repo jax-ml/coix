@@ -18,7 +18,9 @@ import functools
 import inspect
 import itertools
 
-from coix.util import get_site_log_prob, get_log_weight, get_batch_ndims
+from coix.util import get_batch_ndims
+from coix.util import get_log_weight
+from coix.util import get_site_log_prob
 import jax
 import jax.numpy as jnp
 
