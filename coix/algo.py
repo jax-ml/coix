@@ -289,7 +289,7 @@ def nvi_rkl(targets, forwards, reverses, *, num_targets=None):
       p, q = extend(p, rev), compose(stick_the_landing(fwd), resample(q))
       return propose(p, q, loss_fn=rkl_loss, detach=True)
 
-    return fori_loop(0, num_targets - 1, body_fun, body_fun(0, targets(0)))
+    return fori_loop(0, num_targets - 1, body_fun, targets(0))
 
   q = targets[0]
   for p, fwd, rev in zip(targets[1:], forwards, reverses):
