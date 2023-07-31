@@ -28,12 +28,6 @@ dependencies = [
 # `version` is automatically set by flit to use `coix.__version__`
 dynamic = ["version"]
 
-[tool.peotry]
-name = "coix"
-description = "Inference Combinators in JAX"
-authors = [{name = "coix authors", email="coix-dev@google.com"}]
-readme = "README.md"
-
 [project.urls]
 homepage = "https://github.com/jax-ml/coix"
 repository = "https://github.com/jax-ml/coix"
