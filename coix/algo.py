@@ -144,6 +144,7 @@ def dais(targets, momentum, leapfrog, refreshment, *, num_targets=None):
   if _use_fori_loop(targets, num_targets):
 
     def body_fun(i, q):
+      assert callable(targets)
       p = extend(compose(momentum, targets(i), suffix=False), refreshment)
       return propose(p, compose(refreshment, compose(leapfrog, q)))
 
@@ -155,7 +156,7 @@ def dais(targets, momentum, leapfrog, refreshment, *, num_targets=None):
 
   targets = [compose(momentum, p, suffix=False) for p in targets]
   q = targets[0]
-  loss_fns = [None] * (len(targets) - 2) + [iwae_loss]
+  loss_fns = (None,) * (len(targets) - 2) + (iwae_loss,)
   for p, loss_fn in zip(targets[1:], loss_fns):
     q = compose(refreshment, compose(leapfrog, q))
     q = propose(extend(p, refreshment), q, loss_fn=loss_fn)
@@ -413,7 +414,7 @@ def vsmc(targets, proposals, *, num_targets=None):
     return propose(targets(num_targets - 1), q, loss_fn=iwae_loss)
 
   q = propose(targets[0], proposals[0])
-  loss_fns = [None] * (len(proposals) - 2) + [iwae_loss]
+  loss_fns = (None,) * (len(proposals) - 2) + (iwae_loss,)
   for p, fwd, loss_fn in zip(targets[1:], proposals[1:], loss_fns):
     q = propose(p, compose(fwd, resample(q)), loss_fn=loss_fn)
   return q

@@ -12,20 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for util.py."""
+"""Tests for core.py."""
 
-import coix
-import jax
-import numpy as np
-import pytest
+import coix.core
 
 
-@pytest.mark.parametrize("seed", [0, None])
-def test_systematic_resampling_uniform(seed):
-  log_weights = np.zeros(5)
-  rng_key = jax.random.PRNGKey(seed) if seed is not None else None
-  num_samples = 5
-  resample_indices = coix.util.get_systematic_resampling_indices(
-      log_weights, rng_key, num_samples
-  )
-  np.testing.assert_allclose(resample_indices, np.arange(5))
+def test_desuffix():
+  trace = {
+      "z_PREV__PREV_": 0,
+      "v_PREV__PREV_": 1,
+      "z_PREV_": 2,
+      "v_PREV_": 3,
+      "v": 4,
+  }
+  desuffix_trace = {
+      "z_PREV_": 0,
+      "v_PREV__PREV_": 1,
+      "z": 2,
+      "v_PREV_": 3,
+      "v": 4,
+  }
+  assert coix.core.desuffix(trace) == desuffix_trace

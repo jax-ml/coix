@@ -14,7 +14,6 @@
 
 import argparse
 from functools import partial
-import sys
 
 import coix
 import flax
@@ -22,9 +21,6 @@ import flax.linen as nn
 import jax
 from jax import random
 import jax.numpy as jnp
-from matplotlib.animation import FuncAnimation
-from matplotlib.patches import Ellipse
-from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 import numpy as np
 import numpyro
@@ -61,7 +57,7 @@ class AnnealDensity(nn.Module):
     mu = 10 * jnp.stack([jnp.sin(angles), jnp.cos(angles)], -1)
     sigma = jnp.sqrt(0.5)
     target_density = nn.logsumexp(
-        dist.Normal(mu, sigma).log_prob(x).sum(-1), -1
+        dist.Normal(mu, sigma).log_prob(x[..., None, :]).sum(-1), -1
     )
     init_proposal = dist.Normal(0, 5).log_prob(x).sum(-1)
     return beta_k * target_density + (1 - beta_k) * init_proposal
@@ -103,32 +99,39 @@ class AnnealNetwork(nn.Module):
 ### Model and kernels
 
 
-def anneal_target(network, key, k=0):
-  key_out, key = random.split(key)
-  x = coix.rv(dist.Normal(0, 5).expand([2]).mask(False), name="x")(key)
-  coix.factor(network.anneal_density(x, index=k), name="anneal_density")
-  return key_out, {"x": x}
+def anneal_target(network, k=0):
+  x = numpyro.sample("x", dist.Normal(0, 5).expand([2]).mask(False).to_event())
+  anneal_density = network.anneal_density(x, index=k)
+  numpyro.sample("anneal_density", dist.Unit(anneal_density))
+  return ({"x": x},)
 
 
-def anneal_forward(network, key, inputs, k=0):
+def anneal_forward(network, inputs, k=0):
   mu, sigma = network.forward_kernels(inputs["x"], index=k)
-  return coix.rv(dist.Normal(mu, sigma), name="x")(key)
+  return numpyro.sample("x", dist.Normal(mu, sigma).to_event(1))
 
 
-def anneal_reverse(network, key, inputs, k=0):
+def anneal_reverse(network, inputs, k=0):
   mu, sigma = network.reverse_kernels(inputs["x"], index=k)
-  return coix.rv(dist.Normal(mu, sigma), name="x")(key)
+  return numpyro.sample("x", dist.Normal(mu, sigma).to_event(1))
 
 
 ### Train
 
 
-def make_anneal(params, unroll=False):
+def make_anneal(params, unroll=False, num_particles=10):
   network = coix.util.BindModule(AnnealNetwork(), params)
   # Add particle dimension and construct a program.
-  targets = lambda k: jax.vmap(partial(anneal_target, network, k=k))
-  forwards = lambda k: jax.vmap(partial(anneal_forward, network, k=k))
-  reverses = lambda k: jax.vmap(partial(anneal_reverse, network, k=k))
+  make_particle_plate = lambda: numpyro.plate("particle", num_particles, dim=-1)
+  targets = lambda k: make_particle_plate()(
+      partial(anneal_target, network, k=k)
+  )
+  forwards = lambda k: make_particle_plate()(
+      partial(anneal_forward, network, k=k)
+  )
+  reverses = lambda k: make_particle_plate()(
+      partial(anneal_reverse, network, k=k)
+  )
   if unroll:  # to unroll the algorithm, we provide a list of programs
     targets = [targets(k) for k in range(8)]
     forwards = [forwards(k) for k in range(7)]
@@ -138,12 +141,9 @@ def make_anneal(params, unroll=False):
 
 
 def loss_fn(params, key, num_particles, unroll=False):
-  # Prepare data for the program.
-  rng_keys = random.split(key, num_particles)
-
   # Run the program and get metrics.
-  program = make_anneal(params, unroll=unroll)
-  _, _, metrics = coix.traced_evaluate(program)(rng_keys)
+  program = make_anneal(params, num_particles=num_particles, unroll=unroll)
+  _, _, metrics = coix.traced_evaluate(program, seed=key)()
   return metrics["loss"], metrics
 
 
@@ -164,10 +164,14 @@ def main(args):
       jit_compile=True,
   )
 
-  rng_keys = random.split(random.PRNGKey(1), 100000).reshape((100, 1000, 2))
-  _, trace, metrics = coix.traced_evaluate(
-      jax.vmap(make_anneal(anneal_params))
-  )(rng_keys)
+  rng_keys = random.split(random.PRNGKey(1), 100)
+
+  def eval_program(seed):
+    p = make_anneal(anneal_params, unroll=unroll, num_particles=1000)
+    out, trace, metrics = coix.traced_evaluate(p, seed=seed)()
+    return out, trace, metrics
+
+  _, trace, metrics = jax.vmap(eval_program)(rng_keys)
 
   metrics.pop("log_weight")
   anneal_metrics = jax.tree_util.tree_map(
