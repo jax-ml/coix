@@ -32,7 +32,7 @@ dynamic = ["version"]
 homepage = "https://github.com/jax-ml/coix"
 repository = "https://github.com/jax-ml/coix"
 changelog = "https://github.com/jax-ml/coix/blob/main/CHANGELOG.md"
-# TODO(phandu): documentation = ""
+documentation = "https://coix.readthedocs.io"
 
 [project.optional-dependencies]
 # Development deps (unittest, linting, formating,...)
@@ -47,6 +47,14 @@ dev = [
     "pytest-xdist",
     "pylint>=2.6.0",
     "pyink",
+]
+doc = [
+    "ipython",
+    "nbsphinx",
+    "readthedocs-sphinx-search",
+    "sphinx<5",
+    "sphinx_rtd_theme",
+    "sphinx-gallery",
 ]
 oryx = [
     "oryx@git+https://github.com/jax-ml/oryx",
