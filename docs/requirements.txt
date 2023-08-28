@@ -1,0 +1,15 @@
+ipython
+jax
+jaxlib
+Jinja2
+matplotlib
+nbsphinx
+numpy
+numpyro
+pillow
+pylab-sdk
+pyyaml
+readthedocs-sphinx-search
+sphinx<5
+sphinx-gallery
+sphinx_rtd_theme

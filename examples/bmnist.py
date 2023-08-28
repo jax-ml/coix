@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+BMNIST example in NumPyro
+=========================
+"""
+
 # TODO: Refactor using numpyro backend. The current code is likely not working yet.
 
 import argparse

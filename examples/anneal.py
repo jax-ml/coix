@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Example: Anneal example in NumPyro
+==================================
+"""
+
 import argparse
 from functools import partial
 
