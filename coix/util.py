@@ -133,6 +133,11 @@ class BindModule:
     return self.module.apply(self.params, *args, **kwargs)
 
 
+def _skip_update(grad, opt_state, params):
+  del params
+  return jax.tree_util.tree_map(jnp.zeros_like, grad), opt_state
+
+
 def train(
     loss_fn,
     init_params,
@@ -164,7 +169,7 @@ def train(
     updates, opt_state = jax.lax.cond(
         jnp.isfinite(jax.flatten_util.ravel_pytree(grads)[0]).all(),
         optimizer.update,
-        lambda g, o, p: (jax.tree_util.tree_map(jnp.zeros_like, g), o),
+        _skip_update,
         grads,
         opt_state,
         params,
