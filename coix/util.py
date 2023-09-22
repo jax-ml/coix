@@ -71,12 +71,14 @@ def is_observed_site(site):
 
 
 def can_extract_key(args):
-  return (
-      args
-      and isinstance(args[0], jnp.ndarray)
-      and (args[0].dtype == jnp.uint32)
-      and (jnp.ndim(args[0]) >= 1)
-      and (args[0].shape[-1] == 2)
+  return args and (
+      jax.dtypes.issubdtype(args[0].dtype, jax.dtypes.prng_key)
+      or (
+          isinstance(args[0], jnp.ndarray)
+          and (args[0].dtype == jnp.uint32)
+          and (jnp.ndim(args[0]) >= 1)
+          and (args[0].shape[-1] == 2)
+      )
   )
 
 
@@ -194,7 +196,7 @@ def train(
     params, opt_state, metrics = maybe_jitted_step_fn(
         params, opt_state, *args, **kwargs
     )
-    for name, value in kwargs.items():
+    for name in kwargs:
       if name in metrics:
         kwargs[name] = metrics[name]
     if step == 1:
