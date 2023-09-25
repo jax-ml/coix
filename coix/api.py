@@ -32,6 +32,23 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
+# pytype: disable=module-attr
+try:
+  wrap_key_data = jax.random.wrap_key_data
+except AttributeError:
+  try:
+    wrap_key_data = jax.extend.random.wrap_key_data
+  except AttributeError:
+
+    def _identity(k):
+      return k
+
+    wrap_key_data = _identity
+
+
+# pytype: enable=module-attr
+
+
 __all__ = [
     "compose",
     "extend",
@@ -83,15 +100,20 @@ def extend(p, f):
   return wrapped
 
 
+def _reshape_key(key, shape):
+  if jax.dtypes.issubdtype(key.dtype, jax.dtypes.prng_key):
+    return jnp.reshape(key, shape)
+  else:
+    return jnp.reshape(key, shape + (2,))
+
+
 def _split_key(key):
-  keys = jax.vmap(jax.random.split)(key.reshape(-1, 2)).reshape(
-      key.shape[:-1] + (2, 2)
-  )
-  return keys[..., 0, :], keys[..., 1, :]
+  keys = jax.vmap(jax.random.split, out_axes=1)(_reshape_key(key, (-1,)))
+  return keys[0].reshape(key.shape), keys[1].reshape(key.shape)
 
 
 def _fold_in_key(key, i):
-  key_new = jax.vmap(jax.random.fold_in, (0, None))(key.reshape(-1, 2), i)
+  key_new = jax.vmap(jax.random.fold_in, (0, None))(_reshape_key(key, (-1,)), i)
   return key_new.reshape(key.shape)
 
 
@@ -233,6 +255,12 @@ def _maybe_get_along_first_axis(x, idx, n, squeeze=False):
     idx = idx.reshape(idx.shape + (1,) * (x.ndim - idx.ndim))
     if isinstance(x, np.ndarray):
       y = np.take_along_axis(x, idx, axis=0)
+    elif jax.dtypes.issubdtype(x.dtype, jax.dtypes.prng_key):
+      x_data = jax.random.key_data(x)
+      idx = idx.reshape(idx.shape + (1,) * (x_data.ndim - idx.ndim))
+      y_data = jnp.take_along_axis(x_data, idx, axis=0)
+      y_data = y_data[0] if (idx.shape[0] == 1 and squeeze) else y_data
+      y = wrap_key_data(y_data)
     else:
       y = jnp.take_along_axis(x, idx, axis=0)
     y = y.tolist() if is_list else y
@@ -258,7 +286,7 @@ def resample(q, num_samples=None):
     if util.can_extract_key(args):
       key_r, key_q = _split_key(args[0])
       # We just need a single key for resampling.
-      key_r = key_r.reshape((-1, 2))[0]
+      key_r = _reshape_key(key_r, (-1,))[0]
       args = (key_q,) + args[1:]
     else:
       key_r = core.prng_key()
@@ -415,7 +443,7 @@ def memoize(p, q, memory=None, memory_size=None):
   def wrapped(*args, **kwargs):
     if util.can_extract_key(args):
       key = args[0]
-      p_key, q_key = key + jnp.asarray([1, 0], dtype=key.dtype), key + 1
+      p_key, q_key = _split_key(key)
       p_args = (p_key,) + args[1:]
       q_args = (q_key,) + args[1:]
     else:

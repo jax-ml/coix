@@ -56,6 +56,10 @@ jobs:
     - name: Run core tests
       run: pytest -vv -n auto
 
+    # Run custom prng tests
+    - name: Run custom prng tests
+      run: JAX_ENABLE_CUSTOM_PRNG=1 pytest -vv -n auto
+
   # Auto-publish when version is increased
   publish-job:
     # Only try to publish if:
