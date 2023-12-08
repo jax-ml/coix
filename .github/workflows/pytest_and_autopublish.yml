@@ -16,8 +16,9 @@ jobs:
       with:
         python-version: '3.10'
 
+    - run: sudo apt install -y pandoc gsfonts
     - run: pip --version
-    - run: pip install -e .[dev,oryx]
+    - run: pip install -e .[dev,doc,oryx]
     - run: pip freeze
 
     - name: Lint with pylint
@@ -26,6 +27,8 @@ jobs:
       run: pyink --check .
     - name: Lint with isort
       run: isort --check .
+    - name: Build documentation
+      run: make docs
 
   pytest-job:
     needs: lint
@@ -52,6 +55,10 @@ jobs:
     # Run tests (in parallel)
     - name: Run core tests
       run: pytest -vv -n auto
+
+    # Run custom prng tests
+    - name: Run custom prng tests
+      run: JAX_ENABLE_CUSTOM_PRNG=1 pytest -vv -n auto
 
   # Auto-publish when version is increased
   publish-job:

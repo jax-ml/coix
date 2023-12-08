@@ -74,9 +74,14 @@ def can_extract_key(args):
   return (
       args
       and isinstance(args[0], jnp.ndarray)
-      and (args[0].dtype == jnp.uint32)
-      and (jnp.ndim(args[0]) >= 1)
-      and (args[0].shape[-1] == 2)
+      and (
+          jax.dtypes.issubdtype(args[0].dtype, jax.dtypes.prng_key)
+          or (
+              (args[0].dtype == jnp.uint32)
+              and (jnp.ndim(args[0]) >= 1)
+              and (args[0].shape[-1] == 2)
+          )
+      )
   )
 
 
@@ -131,6 +136,11 @@ class BindModule:
     return self.module.apply(self.params, *args, **kwargs)
 
 
+def _skip_update(grad, opt_state, params):
+  del params
+  return jax.tree_util.tree_map(jnp.zeros_like, grad), opt_state
+
+
 def train(
     loss_fn,
     init_params,
@@ -141,6 +151,8 @@ def train(
     jit_compile=True,
     eval_fn=None,
     log_every=None,
+    init_step=0,
+    opt_state=None,
     **kwargs,
 ):
   """Optimize the parameters."""
@@ -152,10 +164,15 @@ def train(
     grads = jax.tree_util.tree_map(
         lambda x, y: x.astype(y.dtype), grads, params
     )
+    # Helpful metric to print out during training.
+    squared_grad_norm = sum(
+        jnp.square(p).sum() for p in jax.tree_util.tree_leaves(grads)
+    )
+    metrics["squared_grad_norm"] = squared_grad_norm
     updates, opt_state = jax.lax.cond(
         jnp.isfinite(jax.flatten_util.ravel_pytree(grads)[0]).all(),
         optimizer.update,
-        lambda g, o, p: (jax.tree_util.tree_map(jnp.zeros_like, g), o),
+        _skip_update,
         grads,
         opt_state,
         params,
@@ -167,27 +184,27 @@ def train(
     maybe_jitted_step_fn = jit_compile(step_fn)
   else:
     maybe_jitted_step_fn = jax.jit(step_fn) if jit_compile else step_fn
-  opt_state = optimizer.init(init_params)
+  opt_state = optimizer.init(init_params) if opt_state is None else opt_state
   params = init_params
-  run_key = random.PRNGKey(seed)
+  run_key = random.PRNGKey(seed) if isinstance(seed, int) else seed
   log_every = max(num_steps // 20, 1) if log_every is None else log_every
   space = str(len(str(num_steps - 1)))
   kwargs = kwargs.copy()
   if eval_fn is not None:
     print("Evaluating with the initial params...", flush=True)
     tic = time.time()
-    eval_fn(0, params, **kwargs)
+    eval_fn(init_step, params, opt_state, metrics=None)
     print("Time to compile an eval step:", time.time() - tic, flush=True)
   print("Compiling the first train step...", flush=True)
   tic = time.time()
   metrics = None
-  for step in range(1, num_steps + 1):
+  for step in range(init_step + 1, num_steps + 1):
     key = random.fold_in(run_key, step)
     args = (key, next(dataloader)) if dataloader is not None else (key,)
     params, opt_state, metrics = maybe_jitted_step_fn(
         params, opt_state, *args, **kwargs
     )
-    for name, value in kwargs.items():
+    for name in kwargs:
       if name in metrics:
         kwargs[name] = metrics[name]
     if step == 1:
@@ -199,10 +216,10 @@ def train(
         if np.isscalar(value) or (
             isinstance(value, (np.ndarray, jnp.ndarray)) and (value.ndim == 0)
         ):
-          log += f" | {name} {value:10.4f}"
+          log += f" | {name} {float(value):10.4f}"
       print(log, flush=True)
       if eval_fn is not None:
-        eval_fn(step, params, **kwargs)
+        eval_fn(step, params, opt_state, metrics)
   return params, metrics
 
 
@@ -232,15 +249,14 @@ def desuffix(trace):
   return new_trace
 
 
-def get_batch_ndims(log_probs):
-  """Returns the number of same-size leading dimension of the elements
-  in log_probs."""
-  if not log_probs:
+def get_batch_ndims(xs):
+  """Gets the number of same-size leading dimensions of the elements in xs."""
+  if not xs:
     return 0
-  min_ndim = min(jnp.ndim(lp) for lp in log_probs)
+  min_ndim = min(jnp.ndim(lp) for lp in xs)
   batch_ndims = 0
   for i in range(min_ndim):
-    if len(set(jnp.shape(lp)[i] for lp in log_probs)) > 1:
+    if len(set(jnp.shape(lp)[i] for lp in xs)) > 1:
       break
     batch_ndims = batch_ndims + 1
   return batch_ndims

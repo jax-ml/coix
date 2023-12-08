@@ -15,4 +15,7 @@ lint: FORCE
 test: lint FORCE
 	pytest -vv -n auto
 
+docs: FORCE
+	$(MAKE) -C docs html
+
 FORCE:

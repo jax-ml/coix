@@ -12,19 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Example: DMM example in Oryx
+============================
+"""
+
 import argparse
 from functools import partial
-import sys
 
 import coix
-import flax
 import flax.linen as nn
 import jax
 from jax import random
 import jax.numpy as jnp
-from matplotlib.animation import FuncAnimation
-from matplotlib.patches import Ellipse
-from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 import numpy as np
 import numpyro
@@ -304,5 +304,6 @@ if __name__ == "__main__":
 
   tf.config.experimental.set_visible_devices([], "GPU")  # Disable GPU for TF.
   numpyro.set_platform(args.device)
+  coix.set_backend("coix.oryx")
 
   main(args)

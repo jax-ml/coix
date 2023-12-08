@@ -4,7 +4,7 @@
 name = "coix"
 description = "Inference Combinators in JAX"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {file = "LICENSE"}
 authors = [{name = "coix authors", email="coix-dev@google.com"}]
 classifiers = [  # List of https://pypi.org/classifiers/
@@ -32,7 +32,7 @@ dynamic = ["version"]
 homepage = "https://github.com/jax-ml/coix"
 repository = "https://github.com/jax-ml/coix"
 changelog = "https://github.com/jax-ml/coix/blob/main/CHANGELOG.md"
-# TODO(phandu): documentation = ""
+documentation = "https://coix.readthedocs.io"
 
 [project.optional-dependencies]
 # Development deps (unittest, linting, formating,...)
@@ -47,6 +47,14 @@ dev = [
     "pytest-xdist",
     "pylint>=2.6.0",
     "pyink",
+]
+doc = [
+    "ipython",
+    "nbsphinx",
+    "readthedocs-sphinx-search",
+    "sphinx<5",
+    "sphinx_rtd_theme",
+    "sphinx-gallery",
 ]
 oryx = [
     "oryx@git+https://github.com/jax-ml/oryx",

@@ -20,13 +20,12 @@ __all__ = [
     "detach",
     "empirical",
     "factor",
-    "get_backend_name",
     "prng_key",
     "rv",
-    "stick_the_landing",
-    "suffix",
     "register_backend",
     "set_backend",
+    "stick_the_landing",
+    "suffix",
     "traced_evaluate",
 ]
 
@@ -93,8 +92,8 @@ def get_backend_name():
 def get_backend():
   backend = _COIX_BACKEND
   if backend is None:
-    set_backend("coix.oryx")
-    return _BACKENDS["coix.oryx"]
+    set_backend("coix.numpyro")
+    return _BACKENDS["coix.numpyro"]
   else:
     return _BACKENDS[backend]
 
@@ -130,11 +129,12 @@ def desuffix(trace):
   return new_trace
 
 
-def traced_evaluate(p, latents=None, rng_seed=None, **kwargs):
+def traced_evaluate(p, latents=None, seed=None, **kwargs):
   """Performs traced evaluation for a program `p`."""
+  # Work around some backends not having `seed` keyword.
   kwargs = kwargs.copy()
-  if rng_seed is not None:
-    kwargs["rng_seed"] = rng_seed
+  if seed is not None:
+    kwargs["seed"] = seed
   fn = get_backend()["traced_evaluate"](p, latents=latents, **kwargs)
 
   def wrapped(*args, **kwargs):
