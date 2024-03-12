@@ -164,11 +164,18 @@ with open("getting_started.rst", "wt") as f:
 
 # -- Copy notebook files
 
-if not os.path.exists("tutorials"):
-  os.makedirs("tutorials")
+if not os.path.exists("notebooks"):
+  os.makedirs("notebooks")
+
+if not os.path.exists("notebooks/figures"):
+  os.makedirs("notebooks/figures")
 
 for src_file in glob.glob("../notebooks/*.ipynb"):
-  shutil.copy(src_file, "tutorials/")
+  shutil.copy(src_file, "notebooks/")
+
+for src_file in glob.glob("../notebooks/figures/*"):
+  shutil.copy(src_file, "notebooks/figures/")
+
 
 # add index file to `notebooks` path, `:orphan:` is used to
 # tell sphinx that this rst file needs not to be appeared in toctree
@@ -198,7 +205,7 @@ nbsphinx_thumbnails = {}
 for src_file in glob.glob("../notebooks/*.ipynb") + glob.glob(
     "../examples/*.py"
 ):
-  toctree_path = "tutorials/" if src_file.endswith("ipynb") else "examples/"
+  toctree_path = "notebooks/" if src_file.endswith("ipynb") else "examples/"
   filename = os.path.splitext(src_file.split("/")[-1])[0]
   png_path = "_static/img/" + toctree_path + filename + ".png"
   # use Coix logo if not exist png file
