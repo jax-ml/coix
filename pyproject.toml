@@ -52,7 +52,7 @@ doc = [
     "ipython",
     "nbsphinx",
     "readthedocs-sphinx-search",
-    "sphinx<5",
+    "sphinx>=5",
     "sphinx_rtd_theme",
     "sphinx-gallery",
 ]
