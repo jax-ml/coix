@@ -10,6 +10,6 @@ pillow
 pylab-sdk
 pyyaml
 readthedocs-sphinx-search
-sphinx<5
+sphinx>=5
 sphinx-gallery
 sphinx_rtd_theme
