@@ -9,7 +9,7 @@ install: FORCE
 
 lint: FORCE
 	pylint coix
-	pyink --check --exclude=venv
+	pyink --check --exclude=docs
 	isort --check .
 
 test: lint FORCE
