@@ -25,6 +25,9 @@ Coix Documentation
    :caption: Tutorials and Examples
    :name: tutorials
 
+   notebooks/tutorial_part1_vae
+   notebooks/tutorial_part2_api
+   notebooks/tutorial_part3_smcs
    examples/anneal
    examples/anneal_oryx
    examples/gmm_oryx
