@@ -21,12 +21,8 @@ jobs:
     - run: pip install -e .[dev,doc,oryx]
     - run: pip freeze
 
-    - name: Lint with pylint
-      run: pylint coix
-    - name: Lint with pyink
-      run: pyink --check .
-    - name: Lint with isort
-      run: isort --check .
+    - name: Run lint
+      run: make lint
     - name: Build documentation
       run: make docs
 

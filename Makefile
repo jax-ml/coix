@@ -1,7 +1,7 @@
 all: test
 
 format: FORCE
-	pyink .
+	pyink . --exclude=docs
 	isort .
 
 install: FORCE
@@ -9,7 +9,7 @@ install: FORCE
 
 lint: FORCE
 	pylint coix
-	pyink --check .
+	pyink . --check --exclude=docs
 	isort --check .
 
 test: lint FORCE
