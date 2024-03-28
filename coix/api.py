@@ -2,6 +2,7 @@
 
 The implement is pretty much backend-agnostic. We just assume that the core
 backend supports the following functionality:
+
   + `suffix(p)`: rename latent variables of the program `p`,
   + `traced_evaluate(p, latents=None)`: execute `p` and collect trace, metrics,
     optionally we can substitute values in `latents` to `p`,
@@ -27,14 +28,14 @@ __all__ = [
 
 
 def compose(q2, q1, suffix=True):
-  """Executes q2(*q1(...)).
+  r"""Executes q2(\*q1(...)).
 
   Note: We only allow at most one of `q1` or `q2` is weighted.
 
   Args:
     q2: a program
     q1: a program
-    suffix: whether to add suffix `_PREV_` to variables in `q1`
+    suffix: whether to add suffix `\_PREV\_` to variables in `q1`
 
   Returns:
     q: the composed program
@@ -48,7 +49,7 @@ def compose(q2, q1, suffix=True):
 
 
 def extend(p, f):
-  """Executes f(*p(...)) with random variables in f marked as auxiliary.
+  r"""Executes f(\*p(...)) with random variables in f marked as auxiliary.
 
   Note: We don't allow recursively marginalize out `p` yet.
 
