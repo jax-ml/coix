@@ -4,6 +4,9 @@ import functools
 import inspect
 import itertools
 
+from coix.util import get_batch_ndims
+from coix.util import get_log_weight
+from coix.util import get_site_log_prob
 import jax
 import jax.numpy as jnp
 
@@ -403,6 +406,10 @@ def traced_evaluate(p, latents=None):
     if "log_density" not in metrics:
       log_density = sum(jnp.sum(site["log_prob"]) for site in trace.values())
       metrics["log_density"] = jnp.array(0.0) + log_density
+    if "log_weight" not in metrics:
+      log_probs = [get_site_log_prob(site) for site in trace.values()]
+      weight = get_log_weight(trace, get_batch_ndims(log_probs))
+      metrics = {**metrics, "log_weight": weight}
     return out, trace, metrics
 
   return wrapped

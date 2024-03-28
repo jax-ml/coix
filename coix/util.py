@@ -216,3 +216,30 @@ def desuffix(trace):
     raw_name = names_to_raw_names[name]
     new_trace[name[: len(name) - num_suffix_min[raw_name]]] = trace[name]
   return new_trace
+
+
+def get_batch_ndims(xs):
+  """Gets the number of same-size leading dimensions of the elements in xs."""
+  if not xs:
+    return 0
+  min_ndim = min(jnp.ndim(lp) for lp in xs)
+  batch_ndims = 0
+  for i in range(min_ndim):
+    if len(set(jnp.shape(lp)[i] for lp in xs)) > 1:
+      break
+    batch_ndims = batch_ndims + 1
+  return batch_ndims
+
+
+def get_log_weight(trace, batch_ndims):
+  """Computes log weight of the trace and keeps its batch dimensions."""
+  log_weight = jnp.zeros((1,) * batch_ndims)
+  for site in trace.values():
+    lp = get_site_log_prob(site)
+    if is_observed_site(site):
+      log_weight = log_weight + jnp.sum(
+          lp, axis=tuple(range(batch_ndims - jnp.ndim(lp), 0))
+      )
+    else:
+      log_weight = log_weight + jnp.zeros(jnp.shape(lp)[:batch_ndims])
+  return log_weight

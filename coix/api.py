@@ -68,32 +68,6 @@ def extend(p, f):
   return wrapped
 
 
-def _get_batch_ndims(log_probs):
-  if not log_probs:
-    return 0
-  min_ndim = min(jnp.ndim(lp) for lp in log_probs)
-  batch_ndims = 0
-  for i in range(min_ndim):
-    if len(set(jnp.shape(lp)[i] for lp in log_probs)) > 1:
-      break
-    batch_ndims = batch_ndims + 1
-  return batch_ndims
-
-
-def _get_log_weight(trace, batch_ndims):
-  """Computes log weight of the trace and keeps its batch dimensions."""
-  log_weight = jnp.zeros((1,) * batch_ndims)
-  for site in trace.values():
-    lp = util.get_site_log_prob(site)
-    if util.is_observed_site(site):
-      log_weight = log_weight + jnp.sum(
-          lp, axis=tuple(range(batch_ndims - jnp.ndim(lp), 0))
-      )
-    else:
-      log_weight = log_weight + jnp.zeros(jnp.shape(lp)[:batch_ndims])
-  return log_weight
-
-
 def _split_key(key):
   keys = jax.vmap(jax.random.split)(key.reshape(-1, 2)).reshape(
       key.shape[:-1] + (2, 2)
@@ -150,16 +124,14 @@ def propose(p, q, *, loss_fn=None, detach=False):
         name: util.get_site_log_prob(site) for name, site in q_trace.items()
     }
     log_probs = list(p_log_probs.values()) + list(q_log_probs.values())
-    batch_ndims = _get_batch_ndims(log_probs)
+    batch_ndims = util.get_batch_ndims(log_probs)
 
-    if "log_weight" in q_metrics:
-      in_log_weight = q_metrics["log_weight"]
-      in_log_weight = jnp.sum(
-          in_log_weight,
-          axis=tuple(range(batch_ndims - jnp.ndim(in_log_weight), 0)),
-      )
-    else:
-      in_log_weight = _get_log_weight(q_trace, batch_ndims)
+    assert "log_weight" in q_metrics
+    in_log_weight = q_metrics["log_weight"]
+    in_log_weight = jnp.sum(
+        in_log_weight,
+        axis=tuple(range(batch_ndims - jnp.ndim(in_log_weight), 0)),
+    )
     p_log_weight = sum(
         lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
         for name, lp in p_log_probs.items()
@@ -269,7 +241,7 @@ def resample(q, num_samples=None):
     log_probs = {
         name: util.get_site_log_prob(site) for name, site in trace.items()
     }
-    batch_ndims = _get_batch_ndims(log_probs.values())
+    batch_ndims = util.get_batch_ndims(log_probs.values())
     weighted = ("log_weight" in q_metrics) or any(
         util.is_observed_site(site) for site in trace.values()
     )
@@ -284,7 +256,7 @@ def resample(q, num_samples=None):
           axis=tuple(range(batch_ndims - jnp.ndim(in_log_weight), 0)),
       )
     else:
-      in_log_weight = _get_log_weight(trace, batch_ndims)
+      in_log_weight = util.get_log_weight(trace, batch_ndims)
     n = in_log_weight.shape[0]
     k = n if num_samples is None else num_samples
     log_weight = jax.nn.logsumexp(in_log_weight, 0) - jnp.log(k if k else 1)
@@ -321,8 +293,8 @@ def _add_missing_metrics(metrics, trace):
       name: util.get_site_log_prob(site) for name, site in trace.items()
   }
   if "log_weight" not in metrics:
-    batch_ndims = min(_get_batch_ndims(list(log_probs.values())), 1)
-    log_weight = _get_log_weight(trace, batch_ndims)
+    batch_ndims = min(util.get_batch_ndims(list(log_probs.values())), 1)
+    log_weight = util.get_log_weight(trace, batch_ndims)
     full_metrics["log_weight"] = log_weight
     if batch_ndims:  # leftmost dimension is particle dimension
       ess = 1 / (jax.nn.softmax(log_weight, axis=0) ** 2).sum(0)
@@ -430,7 +402,7 @@ def memoize(p, q, memory=None, memory_size=None):
     p_log_probs = {
         name: util.get_site_log_prob(site) for name, site in p_trace.items()
     }
-    batch_ndims = _get_batch_ndims(p_log_probs.values())
+    batch_ndims = util.get_batch_ndims(p_log_probs.values())
 
     p_log_weight = sum(
         lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
