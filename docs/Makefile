@@ -19,9 +19,9 @@ help:
 %: Makefile
 	git clean -dfx build
 	git clean -dfx examples
-	git clean -dfx tutorials
+	git clean -dfx notebooks
 	git clean -f getting_started.rst
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 	git clean -dfx examples
-	git clean -dfx tutorials
+	git clean -dfx notebooks
 	git clean -f getting_started.rst

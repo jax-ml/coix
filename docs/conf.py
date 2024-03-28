@@ -207,10 +207,10 @@ for src_file in glob.glob("../notebooks/*.ipynb") + glob.glob(
 ):
   toctree_path = "notebooks/" if src_file.endswith("ipynb") else "examples/"
   filename = os.path.splitext(src_file.split("/")[-1])[0]
-  png_path = "_static/img/" + toctree_path + filename + ".png"
+  png_path = "_static/" + filename + ".png"
   # use Coix logo if not exist png file
   if not os.path.exists(png_path):
-    png_path = "_static/img/coix_logo_wide.png"
+    png_path = "_static/coix_logo.png"
   nbsphinx_thumbnails[toctree_path + filename] = png_path
 
 
@@ -237,7 +237,7 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ["_static"]
+html_static_path = ["_static"]
 # html_style = "css/coix.css"
 
 # Custom sidebar templates, must be a dictionary that maps document names

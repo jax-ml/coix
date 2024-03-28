@@ -1,4 +1,8 @@
 docs/notebooks
+docs/examples
+docs/getting_started.rst
+docs/sg_execution_times.rst
+venv/
 
 # Compiled python modules.
 *.pyc
