@@ -40,14 +40,17 @@ def test_extend():
   assert set(trace.keys()) == {"x", "z"}
 
   expected_key, expected_x = p(key)
-  np.testing.assert_allclose(out[0], np.asarray(expected_key))
+  expected_key = random.key_data(expected_key)
+  actual_key = random.key_data(out[0])
+  np.testing.assert_allclose(actual_key, expected_key)
   np.testing.assert_allclose(out[1], expected_x)
 
   marginal_pfg = coix.traced_evaluate(coix.extend(p, coix.compose(g, f)))(key)[
       0
   ]
   actual_key2, actual_x2 = marginal_pfg
-  np.testing.assert_allclose(actual_key2, np.asarray(expected_key))
+  actual_key2 = random.key_data(actual_key2)
+  np.testing.assert_allclose(actual_key2, expected_key)
   np.testing.assert_allclose(actual_x2, expected_x)
 
 
@@ -68,7 +71,7 @@ def test_propose():
   out, trace, metrics = coix.traced_evaluate(program)(key)
   assert set(trace.keys()) == {"x", "z"}
   assert isinstance(out, tuple) and len(out) == 2
-  assert out[0].shape == (2,)
+  assert out[0].shape == key.shape
   with np.testing.assert_raises(AssertionError):
     np.testing.assert_allclose(metrics["log_density"], 0.0)
 
@@ -76,7 +79,7 @@ def test_propose():
   keys = random.split(key, 3)
   particle_out = particle_program(keys)
   assert isinstance(particle_out, tuple) and len(particle_out) == 2
-  assert particle_out[0].shape == (3, 2)
+  assert particle_out[0].shape == keys.shape
 
 
 def test_resample():
