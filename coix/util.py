@@ -1,17 +1,3 @@
-# Copyright 2024 The coix Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """Utilities."""
 
 import functools
@@ -74,14 +60,9 @@ def can_extract_key(args):
   return (
       args
       and isinstance(args[0], jnp.ndarray)
-      and (
-          jax.dtypes.issubdtype(args[0].dtype, jax.dtypes.prng_key)
-          or (
-              (args[0].dtype == jnp.uint32)
-              and (jnp.ndim(args[0]) >= 1)
-              and (args[0].shape[-1] == 2)
-          )
-      )
+      and (args[0].dtype == jnp.uint32)
+      and (jnp.ndim(args[0]) >= 1)
+      and (args[0].shape[-1] == 2)
   )
 
 
@@ -136,11 +117,6 @@ class BindModule:
     return self.module.apply(self.params, *args, **kwargs)
 
 
-def _skip_update(grad, opt_state, params):
-  del params
-  return jax.tree_util.tree_map(jnp.zeros_like, grad), opt_state
-
-
 def train(
     loss_fn,
     init_params,
@@ -151,8 +127,6 @@ def train(
     jit_compile=True,
     eval_fn=None,
     log_every=None,
-    init_step=0,
-    opt_state=None,
     **kwargs,
 ):
   """Optimize the parameters."""
@@ -164,15 +138,10 @@ def train(
     grads = jax.tree_util.tree_map(
         lambda x, y: x.astype(y.dtype), grads, params
     )
-    # Helpful metric to print out during training.
-    squared_grad_norm = sum(
-        jnp.square(p).sum() for p in jax.tree_util.tree_leaves(grads)
-    )
-    metrics["squared_grad_norm"] = squared_grad_norm
     updates, opt_state = jax.lax.cond(
         jnp.isfinite(jax.flatten_util.ravel_pytree(grads)[0]).all(),
         optimizer.update,
-        _skip_update,
+        lambda g, o, p: (jax.tree_util.tree_map(jnp.zeros_like, g), o),
         grads,
         opt_state,
         params,
@@ -184,27 +153,27 @@ def train(
     maybe_jitted_step_fn = jit_compile(step_fn)
   else:
     maybe_jitted_step_fn = jax.jit(step_fn) if jit_compile else step_fn
-  opt_state = optimizer.init(init_params) if opt_state is None else opt_state
+  opt_state = optimizer.init(init_params)
   params = init_params
-  run_key = random.PRNGKey(seed) if isinstance(seed, int) else seed
+  run_key = random.PRNGKey(seed)
   log_every = max(num_steps // 20, 1) if log_every is None else log_every
   space = str(len(str(num_steps - 1)))
   kwargs = kwargs.copy()
   if eval_fn is not None:
     print("Evaluating with the initial params...", flush=True)
     tic = time.time()
-    eval_fn(init_step, params, opt_state, metrics=None)
+    eval_fn(0, params, **kwargs)
     print("Time to compile an eval step:", time.time() - tic, flush=True)
   print("Compiling the first train step...", flush=True)
   tic = time.time()
   metrics = None
-  for step in range(init_step + 1, num_steps + 1):
+  for step in range(1, num_steps + 1):
     key = random.fold_in(run_key, step)
     args = (key, next(dataloader)) if dataloader is not None else (key,)
     params, opt_state, metrics = maybe_jitted_step_fn(
         params, opt_state, *args, **kwargs
     )
-    for name in kwargs:
+    for name, value in kwargs.items():
       if name in metrics:
         kwargs[name] = metrics[name]
     if step == 1:
@@ -216,10 +185,10 @@ def train(
         if np.isscalar(value) or (
             isinstance(value, (np.ndarray, jnp.ndarray)) and (value.ndim == 0)
         ):
-          log += f" | {name} {float(value):10.4f}"
+          log += f" | {name} {value:10.4f}"
       print(log, flush=True)
       if eval_fn is not None:
-        eval_fn(step, params, opt_state, metrics)
+        eval_fn(step, params, **kwargs)
   return params, metrics
 
 
@@ -247,30 +216,3 @@ def desuffix(trace):
     raw_name = names_to_raw_names[name]
     new_trace[name[: len(name) - num_suffix_min[raw_name]]] = trace[name]
   return new_trace
-
-
-def get_batch_ndims(xs):
-  """Gets the number of same-size leading dimensions of the elements in xs."""
-  if not xs:
-    return 0
-  min_ndim = min(jnp.ndim(lp) for lp in xs)
-  batch_ndims = 0
-  for i in range(min_ndim):
-    if len(set(jnp.shape(lp)[i] for lp in xs)) > 1:
-      break
-    batch_ndims = batch_ndims + 1
-  return batch_ndims
-
-
-def get_log_weight(trace, batch_ndims):
-  """Computes log weight of the trace and keeps its batch dimensions."""
-  log_weight = jnp.zeros((1,) * batch_ndims)
-  for site in trace.values():
-    lp = get_site_log_prob(site)
-    if is_observed_site(site):
-      log_weight = log_weight + jnp.sum(
-          lp, axis=tuple(range(batch_ndims - jnp.ndim(lp), 0))
-      )
-    else:
-      log_weight = log_weight + jnp.zeros(jnp.shape(lp)[:batch_ndims])
-  return log_weight

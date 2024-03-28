@@ -1,22 +1,7 @@
-# Copyright 2024 The coix Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """Program combinators.
 
 The implement is pretty much backend-agnostic. We just assume that the core
 backend supports the following functionality:
-
   + `suffix(p)`: rename latent variables of the program `p`,
   + `traced_evaluate(p, latents=None)`: execute `p` and collect trace, metrics,
     optionally we can substitute values in `latents` to `p`,
@@ -32,23 +17,6 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-# pytype: disable=module-attr
-try:
-  wrap_key_data = jax.random.wrap_key_data
-except AttributeError:
-  try:
-    wrap_key_data = jax.extend.random.wrap_key_data
-  except AttributeError:
-
-    def _identity(k):
-      return k
-
-    wrap_key_data = _identity
-
-
-# pytype: enable=module-attr
-
-
 __all__ = [
     "compose",
     "extend",
@@ -59,14 +27,14 @@ __all__ = [
 
 
 def compose(q2, q1, suffix=True):
-  r"""Executes q2(\*q1(...)).
+  """Executes q2(*q1(...)).
 
   Note: We only allow at most one of `q1` or `q2` is weighted.
 
   Args:
     q2: a program
     q1: a program
-    suffix: whether to add suffix `\_PREV\_` to variables in `q1`
+    suffix: whether to add suffix `_PREV_` to variables in `q1`
 
   Returns:
     q: the composed program
@@ -80,7 +48,7 @@ def compose(q2, q1, suffix=True):
 
 
 def extend(p, f):
-  r"""Executes f(\*p(...)) with random variables in f marked as auxiliary.
+  """Executes f(*p(...)) with random variables in f marked as auxiliary.
 
   Note: We don't allow recursively marginalize out `p` yet.
 
@@ -100,20 +68,41 @@ def extend(p, f):
   return wrapped
 
 
-def _reshape_key(key, shape):
-  if jax.dtypes.issubdtype(key.dtype, jax.dtypes.prng_key):
-    return jnp.reshape(key, shape)
-  else:
-    return jnp.reshape(key, shape + (2,))
+def _get_batch_ndims(log_probs):
+  if not log_probs:
+    return 0
+  min_ndim = min(jnp.ndim(lp) for lp in log_probs)
+  batch_ndims = 0
+  for i in range(min_ndim):
+    if len(set(jnp.shape(lp)[i] for lp in log_probs)) > 1:
+      break
+    batch_ndims = batch_ndims + 1
+  return batch_ndims
+
+
+def _get_log_weight(trace, batch_ndims):
+  """Computes log weight of the trace and keeps its batch dimensions."""
+  log_weight = jnp.zeros((1,) * batch_ndims)
+  for site in trace.values():
+    lp = util.get_site_log_prob(site)
+    if util.is_observed_site(site):
+      log_weight = log_weight + jnp.sum(
+          lp, axis=tuple(range(batch_ndims - jnp.ndim(lp), 0))
+      )
+    else:
+      log_weight = log_weight + jnp.zeros(jnp.shape(lp)[:batch_ndims])
+  return log_weight
 
 
 def _split_key(key):
-  keys = jax.vmap(jax.random.split, out_axes=1)(_reshape_key(key, (-1,)))
-  return keys[0].reshape(key.shape), keys[1].reshape(key.shape)
+  keys = jax.vmap(jax.random.split)(key.reshape(-1, 2)).reshape(
+      key.shape[:-1] + (2, 2)
+  )
+  return keys[..., 0, :], keys[..., 1, :]
 
 
 def _fold_in_key(key, i):
-  key_new = jax.vmap(jax.random.fold_in, (0, None))(_reshape_key(key, (-1,)), i)
+  key_new = jax.vmap(jax.random.fold_in, (0, None))(key.reshape(-1, 2), i)
   return key_new.reshape(key.shape)
 
 
@@ -161,7 +150,7 @@ def propose(p, q, *, loss_fn=None, detach=False):
         name: util.get_site_log_prob(site) for name, site in q_trace.items()
     }
     log_probs = list(p_log_probs.values()) + list(q_log_probs.values())
-    batch_ndims = util.get_batch_ndims(log_probs)
+    batch_ndims = _get_batch_ndims(log_probs)
 
     if "log_weight" in q_metrics:
       in_log_weight = q_metrics["log_weight"]
@@ -170,7 +159,7 @@ def propose(p, q, *, loss_fn=None, detach=False):
           axis=tuple(range(batch_ndims - jnp.ndim(in_log_weight), 0)),
       )
     else:
-      in_log_weight = util.get_log_weight(q_trace, batch_ndims)
+      in_log_weight = _get_log_weight(q_trace, batch_ndims)
     p_log_weight = sum(
         lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
         for name, lp in p_log_probs.items()
@@ -179,7 +168,7 @@ def propose(p, q, *, loss_fn=None, detach=False):
     # Note: We include superfluous variables, whose `name in p_trace`.
     q_log_weight = sum(
         lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
-        for lp in q_log_probs.values()
+        for name, lp in q_log_probs.items()
     )
     incremental_log_weight = p_log_weight - q_log_weight
     log_weight = in_log_weight + incremental_log_weight
@@ -232,20 +221,12 @@ def _maybe_get_along_first_axis(x, idx, n, squeeze=False):
     x = np.array(x)
   # Special treatment for cascades.
   if hasattr(x, "value"):
-    setattr(
-        x,
-        "value",
-        _maybe_get_along_first_axis(
-            util.get_site_value(x), idx, n, squeeze=squeeze
-        ),
+    x.value = _maybe_get_along_first_axis(
+        util.get_site_value(x), idx, n, squeeze=squeeze
     )
   if hasattr(x, "log_density"):
-    setattr(
-        x,
-        "log_density",
-        _maybe_get_along_first_axis(
-            util.get_site_log_prob(x), idx, n, squeeze=squeeze
-        ),
+    x.log_density = _maybe_get_along_first_axis(
+        util.get_site_log_prob(x), idx, n, squeeze=squeeze
     )
   if (
       isinstance(x, (np.ndarray, jnp.ndarray))
@@ -255,12 +236,6 @@ def _maybe_get_along_first_axis(x, idx, n, squeeze=False):
     idx = idx.reshape(idx.shape + (1,) * (x.ndim - idx.ndim))
     if isinstance(x, np.ndarray):
       y = np.take_along_axis(x, idx, axis=0)
-    elif jax.dtypes.issubdtype(x.dtype, jax.dtypes.prng_key):
-      x_data = jax.random.key_data(x)
-      idx = idx.reshape(idx.shape + (1,) * (x_data.ndim - idx.ndim))
-      y_data = jnp.take_along_axis(x_data, idx, axis=0)
-      y_data = y_data[0] if (idx.shape[0] == 1 and squeeze) else y_data
-      y = wrap_key_data(y_data)
     else:
       y = jnp.take_along_axis(x, idx, axis=0)
     y = y.tolist() if is_list else y
@@ -286,7 +261,7 @@ def resample(q, num_samples=None):
     if util.can_extract_key(args):
       key_r, key_q = _split_key(args[0])
       # We just need a single key for resampling.
-      key_r = _reshape_key(key_r, (-1,))[0]
+      key_r = key_r.reshape((-1, 2)).sum(0)
       args = (key_q,) + args[1:]
     else:
       key_r = core.prng_key()
@@ -294,7 +269,7 @@ def resample(q, num_samples=None):
     log_probs = {
         name: util.get_site_log_prob(site) for name, site in trace.items()
     }
-    batch_ndims = util.get_batch_ndims(log_probs.values())
+    batch_ndims = _get_batch_ndims(log_probs.values())
     weighted = ("log_weight" in q_metrics) or any(
         util.is_observed_site(site) for site in trace.values()
     )
@@ -309,7 +284,7 @@ def resample(q, num_samples=None):
           axis=tuple(range(batch_ndims - jnp.ndim(in_log_weight), 0)),
       )
     else:
-      in_log_weight = util.get_log_weight(trace, batch_ndims)
+      in_log_weight = _get_log_weight(trace, batch_ndims)
     n = in_log_weight.shape[0]
     k = n if num_samples is None else num_samples
     log_weight = jax.nn.logsumexp(in_log_weight, 0) - jnp.log(k if k else 1)
@@ -346,20 +321,15 @@ def _add_missing_metrics(metrics, trace):
       name: util.get_site_log_prob(site) for name, site in trace.items()
   }
   if "log_weight" not in metrics:
-    batch_ndims = min(util.get_batch_ndims(list(log_probs.values())), 1)
-    log_weight = util.get_log_weight(trace, batch_ndims)
+    batch_ndims = min(_get_batch_ndims(list(log_probs.values())), 1)
+    log_weight = _get_log_weight(trace, batch_ndims)
     full_metrics["log_weight"] = log_weight
-  else:
-    batch_ndims = metrics["log_weight"].ndim
-    log_weight = metrics["log_weight"]
-  # leftmost dimension is particle dimension
-  if batch_ndims and "ess" not in metrics:
-    assert "log_Z" not in metrics
-    ess = 1 / (jax.nn.softmax(log_weight, axis=0) ** 2).sum(0)
-    full_metrics["ess"] = ess.mean()
-    n = log_weight.shape[0]
-    log_z = jax.scipy.special.logsumexp(log_weight, 0) - jnp.log(n)
-    full_metrics["log_Z"] = log_z.mean()
+    if batch_ndims:  # leftmost dimension is particle dimension
+      ess = 1 / (jax.nn.softmax(log_weight, axis=0) ** 2).sum(0)
+      full_metrics["ess"] = ess.mean()
+      n = log_weight.shape[0]
+      log_z = jax.scipy.special.logsumexp(log_weight, 0) - jnp.log(n)
+      full_metrics["log_Z"] = log_z.mean()
   if "loss" not in metrics:
     full_metrics["loss"] = jnp.array(0.0)
   if "log_density" not in metrics:
@@ -383,18 +353,17 @@ def fori_loop(lower, upper, body_fun, init_program):
   """
 
   def fn(*args, **kwargs):
-    def trace_arg_key(fn, key):
-      return core.traced_evaluate(fn)(key, *args[1:], **kwargs)
-
-    def trace_with_seed(fn, key):
-      return core.traced_evaluate(fn, seed=key)(*args, **kwargs)
-
     if util.can_extract_key(args):
       key = args[0]
-      trace_fn = trace_arg_key
+
+      def trace_fn(fn, key):
+        return core.traced_evaluate(fn)(key, *args[1:], **kwargs)
+
     else:
       key = core.prng_key()
-      trace_fn = trace_with_seed
+
+      def trace_fn(fn, key):
+        return core.traced_evaluate(fn, seed=key)(*args, **kwargs)
 
     key_body, key_init = _split_key(key)
 
@@ -443,7 +412,7 @@ def memoize(p, q, memory=None, memory_size=None):
   def wrapped(*args, **kwargs):
     if util.can_extract_key(args):
       key = args[0]
-      p_key, q_key = _split_key(key)
+      p_key, q_key = key + jnp.asarray([1, 0], dtype=key.dtype), key + 1
       p_args = (p_key,) + args[1:]
       q_args = (q_key,) + args[1:]
     else:
@@ -461,11 +430,11 @@ def memoize(p, q, memory=None, memory_size=None):
     p_log_probs = {
         name: util.get_site_log_prob(site) for name, site in p_trace.items()
     }
-    batch_ndims = util.get_batch_ndims(p_log_probs.values())
+    batch_ndims = _get_batch_ndims(p_log_probs.values())
 
     p_log_weight = sum(
         lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
-        for lp in p_log_probs.values()
+        for name, lp in p_log_probs.items()
     )
 
     marginal_trace = {
@@ -476,7 +445,6 @@ def memoize(p, q, memory=None, memory_size=None):
     new_memory = {
         name: util.get_site_value(site) for name, site in marginal_trace.items()
     }
-    assert not isinstance(p_log_weight, int)
     num_particles = p_log_weight.shape[0]
     batch_dim = p_log_weight.ndim
     flat_memory = {

@@ -1,17 +1,3 @@
-# Copyright 2024 The coix Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """Program transforms."""
 
 import importlib
@@ -20,12 +6,13 @@ __all__ = [
     "detach",
     "empirical",
     "factor",
+    "get_backend_name",
     "prng_key",
     "rv",
-    "register_backend",
-    "set_backend",
     "stick_the_landing",
     "suffix",
+    "register_backend",
+    "set_backend",
     "traced_evaluate",
 ]
 
@@ -92,8 +79,8 @@ def get_backend_name():
 def get_backend():
   backend = _COIX_BACKEND
   if backend is None:
-    set_backend("coix.numpyro")
-    return _BACKENDS["coix.numpyro"]
+    set_backend("coix.oryx")
+    return _BACKENDS["coix.oryx"]
   else:
     return _BACKENDS[backend]
 
@@ -129,12 +116,11 @@ def desuffix(trace):
   return new_trace
 
 
-def traced_evaluate(p, latents=None, seed=None, **kwargs):
+def traced_evaluate(p, latents=None, rng_seed=None, **kwargs):
   """Performs traced evaluation for a program `p`."""
-  # Work around some backends not having `seed` keyword.
   kwargs = kwargs.copy()
-  if seed is not None:
-    kwargs["seed"] = seed
+  if rng_seed is not None:
+    kwargs["rng_seed"] = rng_seed
   fn = get_backend()["traced_evaluate"](p, latents=latents, **kwargs)
 
   def wrapped(*args, **kwargs):
