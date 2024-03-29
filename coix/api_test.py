@@ -15,6 +15,7 @@
 """Tests for api.py."""
 
 import coix
+import coix.oryx as coryx
 import jax
 from jax import random
 import numpy as np
@@ -27,11 +28,11 @@ coix.set_backend("coix.oryx")
 def test_compose():
   def p(key):
     key, subkey = random.split(key)
-    x = coix.rv(dist.Normal(0, 1), name="x")(subkey)
+    x = coryx.rv(dist.Normal(0, 1), name="x")(subkey)
     return key, x
 
   def f(key, x):
-    return coix.rv(dist.Normal(x, 1), name="z")(key)
+    return coryx.rv(dist.Normal(x, 1), name="z")(key)
 
   _, p_trace, _ = coix.traced_evaluate(coix.compose(f, p))(random.PRNGKey(0))
   assert set(p_trace.keys()) == {"x", "z"}
@@ -40,11 +41,11 @@ def test_compose():
 def test_extend():
   def p(key):
     key, subkey = random.split(key)
-    x = coix.rv(dist.Normal(0, 1), name="x")(subkey)
+    x = coryx.rv(dist.Normal(0, 1), name="x")(subkey)
     return key, x
 
   def f(key, x):
-    return (coix.rv(dist.Normal(x, 1), name="z")(key),)
+    return (coryx.rv(dist.Normal(x, 1), name="z")(key),)
 
   def g(z):
     return z + 1
@@ -71,14 +72,14 @@ def test_extend():
 def test_propose():
   def p(key):
     key, subkey = random.split(key)
-    x = coix.rv(dist.Normal(0, 1), name="x")(subkey)
+    x = coryx.rv(dist.Normal(0, 1), name="x")(subkey)
     return key, x
 
   def f(key, x):
-    return coix.rv(dist.Normal(x, 1), name="z")(key)
+    return coryx.rv(dist.Normal(x, 1), name="z")(key)
 
   def q(key):
-    return coix.rv(dist.Normal(1, 2), name="x")(key)
+    return coryx.rv(dist.Normal(1, 2), name="x")(key)
 
   program = coix.propose(coix.extend(p, f), q)
   key = random.PRNGKey(0)
@@ -98,7 +99,7 @@ def test_propose():
 
 def test_resample():
   def q(key):
-    return coix.rv(dist.Normal(1, 2), name="x")(key)
+    return coryx.rv(dist.Normal(1, 2), name="x")(key)
 
   particle_program = jax.vmap(q)
   keys = random.split(random.PRNGKey(0), 3)
@@ -108,8 +109,8 @@ def test_resample():
 
 def test_resample_one():
   def q(key):
-    x = coix.rv(dist.Normal(1, 2), name="x")(key)
-    return coix.rv(dist.Normal(x, 1), name="z", obs=0.0)
+    x = coryx.rv(dist.Normal(1, 2), name="x")(key)
+    return coryx.rv(dist.Normal(x, 1), name="z", obs=0.0)
 
   particle_program = jax.vmap(q)
   keys = random.split(random.PRNGKey(0), 3)
@@ -120,7 +121,7 @@ def test_resample_one():
 def test_fori_loop():
   def drift(key, x):
     key_out, key = random.split(key)
-    x_new = coix.rv(dist.Normal(x, 1.0), name="x")(key)
+    x_new = coryx.rv(dist.Normal(x, 1.0), name="x")(key)
     return key_out, x_new
 
   compile_time = {"value": 0}
@@ -145,12 +146,12 @@ def test_fori_loop():
 @pytest.mark.skip(reason="Currently, we only support memoised lists.")
 def test_memoize():
   def model(key):
-    x = coix.rv(dist.Normal(0, 1), name="x")(key)
-    y = coix.rv(dist.Normal(x, 1), name="y", obs=0.0)
+    x = coryx.rv(dist.Normal(0, 1), name="x")(key)
+    y = coryx.rv(dist.Normal(x, 1), name="y", obs=0.0)
     return x, y
 
   def guide(key):
-    return coix.rv(dist.Normal(1, 2), name="x")(key)
+    return coryx.rv(dist.Normal(1, 2), name="x")(key)
 
   def vmodel(key):
     return jax.vmap(model)(random.split(key, 5))

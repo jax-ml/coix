@@ -16,7 +16,7 @@
 
 import coix
 import coix.core
-import coix.oryx
+import coix.oryx as coryx
 import jax
 from jax import random
 import jax.numpy as jnp
@@ -28,7 +28,7 @@ coix.set_backend("coix.oryx")
 
 def test_call_and_reap_tags():
   def model(key):
-    return coix.rv(dist.Normal(0, 1), name="x")(key)
+    return coryx.rv(dist.Normal(0, 1), name="x")(key)
 
   _, trace, _ = coix.traced_evaluate(model)(random.PRNGKey(0))
   assert set(trace.keys()) == {"x"}
@@ -38,7 +38,7 @@ def test_call_and_reap_tags():
 def test_delta_distribution():
   def model(key):
     x = random.normal(key)
-    return coix.rv(dist.Delta(x, 5.0), name="x")(key)
+    return coryx.rv(dist.Delta(x, 5.0), name="x")(key)
 
   _, trace, _ = coix.traced_evaluate(model)(random.PRNGKey(0))
   assert set(trace.keys()) == {"x"}
@@ -46,7 +46,7 @@ def test_delta_distribution():
 
 def test_detach():
   def model(x):
-    return coix.rv(dist.Delta(x, 0.0), name="x")(None) * x
+    return coryx.rv(dist.Delta(x, 0.0), name="x")(None) * x
 
   x = 2.0
   np.testing.assert_allclose(jax.grad(coix.detach(model))(x), x)
@@ -54,7 +54,7 @@ def test_detach():
 
 def test_detach_vmap():
   def model(x):
-    return coix.rv(dist.Normal(x, 1.0), name="x")(random.PRNGKey(0))
+    return coryx.rv(dist.Normal(x, 1.0), name="x")(random.PRNGKey(0))
 
   outs = coix.detach(jax.vmap(model))(jnp.ones(2))
   np.testing.assert_allclose(outs[0], outs[1])
@@ -63,7 +63,7 @@ def test_detach_vmap():
 def test_distribution():
   def model(key):
     x = random.normal(key)
-    return coix.rv(dist.Delta(x, 5.0), name="x")(key)
+    return coryx.rv(dist.Delta(x, 5.0), name="x")(key)
 
   f = coix.oryx.call_and_reap_tags(
       coix.oryx.tag_distribution(model), coix.oryx.DISTRIBUTION
@@ -90,7 +90,7 @@ def test_empirical_program():
 
 def test_factor():
   def model(x):
-    return coix.factor(x, name="x")
+    return coryx.factor(x, name="x")
 
   _, trace, _ = coix.traced_evaluate(model)(10.0)
   assert "x" in trace
@@ -99,7 +99,7 @@ def test_factor():
 
 def test_log_prob_detach():
   def model(loc):
-    x = coix.rv(dist.Normal(loc, 1), name="x")(random.PRNGKey(0))
+    x = coryx.rv(dist.Normal(loc, 1), name="x")(random.PRNGKey(0))
     return x
 
   def actual_fn(x):
@@ -115,7 +115,7 @@ def test_log_prob_detach():
 
 def test_observed():
   def model(a):
-    return coix.rv(dist.Delta(2.0, 3.0), obs=1.0, name="x") + a
+    return coryx.rv(dist.Delta(2.0, 3.0), obs=1.0, name="x") + a
 
   _, trace, _ = coix.traced_evaluate(model)(2.0)
   assert "x" in trace
@@ -125,7 +125,7 @@ def test_observed():
 
 def test_stick_the_landing():
   def model(lp):
-    return coix.rv(dist.Delta(0.0, lp), name="x")(None)
+    return coryx.rv(dist.Delta(0.0, lp), name="x")(None)
 
   def p(x):
     return coix.traced_evaluate(coix.detach(model))(x)[1]["x"]["log_prob"]
@@ -140,7 +140,7 @@ def test_stick_the_landing():
 
 def test_substitute():
   def model(key):
-    return coix.rv(dist.Delta(1.0, 5.0), name="x")(key)
+    return coryx.rv(dist.Delta(1.0, 5.0), name="x")(key)
 
   expected = {"x": 9.0}
   _, trace, _ = coix.traced_evaluate(model, expected)(random.PRNGKey(0))
@@ -150,7 +150,7 @@ def test_substitute():
 
 def test_suffix():
   def model(x):
-    return coix.rv(dist.Delta(x, 5.0), name="x")(None)
+    return coryx.rv(dist.Delta(x, 5.0), name="x")(None)
 
   f = coix.oryx.call_and_reap_tags(
       coix.core.suffix(model), coix.oryx.RANDOM_VARIABLE

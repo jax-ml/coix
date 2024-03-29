@@ -189,7 +189,7 @@ def gmm_kernel_c(network, key, inputs):
       jax.vmap(concatenate_fn, in_axes=(None, 0, 0)), in_axes=(0, None, None)
   )(inputs["x"], inputs["mean"], inputs["tau"])
   logits = network.encode_c(xmt)
-  c = coix.rv(dist.Categorical(logits=logits), name="c")(key_c)
+  c = coryx.rv(dist.Categorical(logits=logits), name="c")(key_c)
 
   out = {**inputs, **{"c": c}}
   return key_out, out
