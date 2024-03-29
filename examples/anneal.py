@@ -13,8 +13,17 @@
 # limitations under the License.
 
 """
-Example: Anneal example in NumPyro
-==================================
+Example: Annealed Variational Inference in NumPyro
+==================================================
+
+This example illustrates how to construct an inference program based on the NVI
+algorithm [1] for AVI. The details of AVI can be found in the sections E.1 of
+the reference. We will use the NumPyro (default) backend for this example.
+
+**References**
+
+    1. Zimmermann, Heiko, et al. "Nested variational inference." NeuRIPS 2021.
+
 """
 
 import argparse
@@ -32,7 +41,8 @@ import numpyro
 import numpyro.distributions as dist
 import optax
 
-### Networks
+# %%
+# First, we define the neural networks for the targets and kernels.
 
 
 class AnnealKernel(nn.Module):
@@ -101,7 +111,8 @@ class AnnealNetwork(nn.Module):
     return self.forward_kernels(x)
 
 
-### Model and kernels
+# %%
+# Then, we define the targets and kernels as in Section E.1.
 
 
 def anneal_target(network, k=0):
@@ -121,7 +132,9 @@ def anneal_reverse(network, inputs, k=0):
   return numpyro.sample("x", dist.Normal(mu, sigma).to_event(1))
 
 
-### Train
+# %%
+# Finally, we create the anneal inference program, define the loss function,
+# run the training loop, and plot the results.
 
 
 def make_anneal(params, unroll=False, num_particles=10):

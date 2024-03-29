@@ -19,9 +19,7 @@ import importlib
 __all__ = [
     "detach",
     "empirical",
-    "factor",
     "prng_key",
-    "rv",
     "register_backend",
     "set_backend",
     "stick_the_landing",
@@ -39,22 +37,18 @@ def register_backend(
     traced_evaluate=None,
     empirical=None,
     suffix=None,
+    prng_key=None,
     detach=None,
     stick_the_landing=None,
-    rv=None,
-    factor=None,
-    prng_key=None,
 ):
   """Register backend."""
   fn_map = {
       "traced_evaluate": traced_evaluate,
       "empirical": empirical,
       "suffix": suffix,
+      "prng_key": prng_key,
       "detach": detach,
       "stick_the_landing": stick_the_landing,
-      "rv": rv,
-      "factor": factor,
-      "prng_key": prng_key,
   }
   _BACKENDS[backend] = fn_map
 
@@ -73,11 +67,9 @@ def set_backend(backend):
         "traced_evaluate",
         "empirical",
         "suffix",
+        "prng_key",
         "detach",
         "stick_the_landing",
-        "rv",
-        "factor",
-        "prng_key",
     ]:
       fn_map[fn] = getattr(module, fn, None)
     register_backend(backend, **fn_map)
@@ -170,22 +162,6 @@ def stick_the_landing(p):
     return fn(p)
   else:
     return p
-
-
-def rv(*args, **kwargs):
-  fn = get_backend()["rv"]
-  if fn is not None:
-    return fn(*args, **kwargs)
-  else:
-    raise NotImplementedError
-
-
-def factor(*args, **kwargs):
-  fn = get_backend()["factor"]
-  if fn is not None:
-    return fn(*args, **kwargs)
-  else:
-    raise NotImplementedError
 
 
 def prng_key():

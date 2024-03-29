@@ -29,10 +29,12 @@ Coix Documentation
    notebooks/tutorial_part2_api
    notebooks/tutorial_part3_smcs
    examples/anneal
-   examples/anneal_oryx
+   examples/gmm
+   examples/dmm
+   examples/bmnist
    examples/gmm_oryx
    examples/dmm_oryx
-   examples/bmnist
+   examples/anneal_oryx
 
 Indices and tables
 ==================

@@ -11,14 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
-Example: Gaussian Mixture Model in Oryx
-=======================================
+Example: Gaussian Mixture Model in NumPyro
+==========================================
 
-This example illustrates how to construct an inference program for GMM, based on
-the APGS sampler [1]. The details of GMM can be found in the sections 6.2 and
-F.1 of the reference. We will use the Oryx backend for this example.
+This example illustrates how to construct an inference program based on the APGS
+sampler [1] for GMM. The details of GMM can be found in the sections 6.2 and
+F.1 of the reference. We will use the NumPyro (default) backend for this
+example.
 
 **References**
 
@@ -31,7 +31,6 @@ import argparse
 from functools import partial
 
 import coix
-import coix.oryx as coryx
 import flax.linen as nn
 import jax
 from jax import random
@@ -46,7 +45,7 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 
 # %%
-# First, let's simulate a synthetic dataset of Gaussian clusters.
+# First, let's simulate a synthetic dataset of 2D Gaussian mixtures.
 
 
 def simulate_clusters(num_instances=1, N=60, seed=0):
@@ -150,12 +149,10 @@ def gmm_target(network, key, inputs):
   key_out, key_mean, key_tau, key_c = random.split(key, 4)
   N = inputs.shape[-2]
 
-  tau = coryx.rv(dist.Gamma(2, 2).expand([3, 2]), name="tau")(key_tau)
-  mean = coryx.rv(dist.Normal(0, 1 / jnp.sqrt(tau * 0.1)), name="mean")(
-      key_mean
-  )
-  c = coryx.rv(dist.DiscreteUniform(0, 3).expand([N]), name="c")(key_c)
-  x = coryx.rv(dist.Normal(mean[c], 1 / jnp.sqrt(tau[c])), obs=inputs, name="x")
+  tau = coix.rv(dist.Gamma(2, 2).expand([3, 2]), name="tau")(key_tau)
+  mean = coix.rv(dist.Normal(0, 1 / jnp.sqrt(tau * 0.1)), name="mean")(key_mean)
+  c = coix.rv(dist.DiscreteUniform(0, 3).expand([N]), name="c")(key_c)
+  x = coix.rv(dist.Normal(mean[c], 1 / jnp.sqrt(tau[c])), obs=inputs, name="x")
 
   out = {"mean": mean, "tau": tau, "c": c, "x": x}
   return key_out, out
@@ -172,10 +169,8 @@ def gmm_kernel_mean_tau(network, key, inputs):
     alpha, beta, mu, nu = network.encode_mean_tau(xc)
   else:
     alpha, beta, mu, nu = network.encode_initial_mean_tau(inputs["x"])
-  tau = coryx.rv(dist.Gamma(alpha, beta), name="tau")(key_tau)
-  mean = coryx.rv(dist.Normal(mu, 1 / jnp.sqrt(tau * nu)), name="mean")(
-      key_mean
-  )
+  tau = coix.rv(dist.Gamma(alpha, beta), name="tau")(key_tau)
+  mean = coix.rv(dist.Normal(mu, 1 / jnp.sqrt(tau * nu)), name="mean")(key_mean)
 
   out = {**inputs, **{"mean": mean, "tau": tau}}
   return key_out, out
@@ -189,7 +184,7 @@ def gmm_kernel_c(network, key, inputs):
       jax.vmap(concatenate_fn, in_axes=(None, 0, 0)), in_axes=(0, None, None)
   )(inputs["x"], inputs["mean"], inputs["tau"])
   logits = network.encode_c(xmt)
-  c = coryx.rv(dist.Categorical(logits=logits), name="c")(key_c)
+  c = coix.rv(dist.Categorical(logits=logits), name="c")(key_c)
 
   out = {**inputs, **{"c": c}}
   return key_out, out

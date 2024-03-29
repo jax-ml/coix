@@ -17,6 +17,7 @@
 import functools
 
 import coix
+import coix.oryx as coryx
 import jax
 from jax import random
 import jax.numpy as jnp
@@ -42,9 +43,9 @@ log_scale_q = -0.5 * np.log(precision_q)
 def model(params, key):
   del params
   key_z, key_next = random.split(key)
-  z = coix.rv(dist.Normal(loc_p, scale_p), name="z")(key_z)
+  z = coryx.rv(dist.Normal(loc_p, scale_p), name="z")(key_z)
   z = jnp.broadcast_to(z, (num_data, dim))
-  x = coix.rv(dist.Normal(z, scale_x), obs=data, name="x")
+  x = coryx.rv(dist.Normal(z, scale_x), obs=data, name="x")
   return key_next, z, x
 
 
@@ -52,7 +53,7 @@ def guide(params, key, *args):
   del args
   key, _ = random.split(key)  # split here to test tie_in
   scale_q = jnp.exp(params["log_scale_q"])
-  z = coix.rv(dist.Normal(params["loc_q"], scale_q), name="z")(key)
+  z = coryx.rv(dist.Normal(params["loc_q"], scale_q), name="z")(key)
   return z
 
 

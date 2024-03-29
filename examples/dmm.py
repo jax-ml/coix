@@ -11,14 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
-Example: Deep Generative Mixture Model in Oryx
-==============================================
+Example: Deep Generative Mixture Model in NumPyro
+=================================================
 
 This example illustrates how to construct an inference program based on the APGS
 sampler [1] for DMM. The details of DMM can be found in the sections 6.3 and
-F.2 of the reference. We will use the Oryx backend for this example.
+F.2 of the reference. We will use the NumPyro (default) backend for this
+example.
 
 **References**
 
@@ -31,7 +31,6 @@ import argparse
 from functools import partial
 
 import coix
-import coix.oryx as coryx
 import flax.linen as nn
 import jax
 from jax import random
@@ -179,11 +178,11 @@ def dmm_target(network, key, inputs):
   key_out, key_mu, key_c, key_h = random.split(key, 4)
   N = inputs.shape[-2]
 
-  mu = coryx.rv(dist.Normal(0, 10).expand([4, 2]), name="mu")(key_mu)
-  c = coryx.rv(dist.DiscreteUniform(0, 3).expand([N]), name="c")(key_c)
-  h = coryx.rv(dist.Beta(1, 1).expand([N]), name="h")(key_h)
+  mu = coix.rv(dist.Normal(0, 10).expand([4, 2]), name="mu")(key_mu)
+  c = coix.rv(dist.DiscreteUniform(0, 3).expand([N]), name="c")(key_c)
+  h = coix.rv(dist.Beta(1, 1).expand([N]), name="h")(key_h)
   x_recon = mu[c] + network.decode_h(h)
-  x = coryx.rv(dist.Normal(x_recon, 0.1), obs=inputs, name="x")
+  x = coix.rv(dist.Normal(x_recon, 0.1), obs=inputs, name="x")
 
   out = {"mu": mu, "c": c, "h": h, "x_recon": x_recon, "x": x}
   return key_out, out
@@ -201,7 +200,7 @@ def dmm_kernel_mu(network, key, inputs):
     loc, scale = network.encode_mu(xch)
   else:
     loc, scale = network.encode_initial_mu(inputs["x"])
-  mu = coryx.rv(dist.Normal(loc, scale), name="mu")(key_mu)
+  mu = coix.rv(dist.Normal(loc, scale), name="mu")(key_mu)
 
   out = {**inputs, **{"mu": mu}}
   return key_out, out
@@ -215,15 +214,17 @@ def dmm_kernel_c_h(network, key, inputs):
       inputs["x"], inputs["mu"]
   )
   logits = network.encode_c(xmu)
-  c = coryx.rv(dist.Categorical(logits=logits), name="c")(key_c)
+  c = coix.rv(dist.Categorical(logits=logits), name="c")(key_c)
   alpha, beta = network.encode_h(inputs["x"] - inputs["mu"][c])
-  h = coryx.rv(dist.Beta(alpha, beta), name="h")(key_h)
+  h = coix.rv(dist.Beta(alpha, beta), name="h")(key_h)
 
   out = {**inputs, **{"c": c, "h": h}}
   return key_out, out
 
 
-### Train
+# %%
+# Finally, we create the dmm inference program, define the loss function,
+# run the training loop, and plot the results.
 
 
 def make_dmm(params, num_sweeps):

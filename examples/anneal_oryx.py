@@ -13,14 +13,24 @@
 # limitations under the License.
 
 """
-Example: Anneal example in Oryx
-===============================
+Example: Annealed Variational Inference in Oryx
+===============================================
+
+This example illustrates how to construct an inference program based on the NVI
+algorithm [1] for AVI. The details of AVI can be found in the sections E.1 of
+the reference. We will use the Oryx backend for this example.
+
+**References**
+
+    1. Zimmermann, Heiko, et al. "Nested variational inference." NeuRIPS 2021.
+
 """
 
 import argparse
 from functools import partial
 
 import coix
+import coix.oryx as coryx
 import flax
 import flax.linen as nn
 import jax
@@ -32,7 +42,8 @@ import numpyro
 import numpyro.distributions as dist
 import optax
 
-### Networks
+# %%
+# First, we define the neural networks for the targets and kernels.
 
 
 class AnnealKernel(nn.Module):
@@ -101,27 +112,30 @@ class AnnealNetwork(nn.Module):
     return self.forward_kernels(x)
 
 
-### Model and kernels
+# %%
+# Then, we define the targets and kernels as in Section E.1.
 
 
 def anneal_target(network, key, k=0):
   key_out, key = random.split(key)
-  x = coix.rv(dist.Normal(0, 5).expand([2]).mask(False), name="x")(key)
+  x = coryx.rv(dist.Normal(0, 5).expand([2]).mask(False), name="x")(key)
   coix.factor(network.anneal_density(x, index=k), name="anneal_density")
   return key_out, {"x": x}
 
 
 def anneal_forward(network, key, inputs, k=0):
   mu, sigma = network.forward_kernels(inputs["x"], index=k)
-  return coix.rv(dist.Normal(mu, sigma), name="x")(key)
+  return coryx.rv(dist.Normal(mu, sigma), name="x")(key)
 
 
 def anneal_reverse(network, key, inputs, k=0):
   mu, sigma = network.reverse_kernels(inputs["x"], index=k)
-  return coix.rv(dist.Normal(mu, sigma), name="x")(key)
+  return coryx.rv(dist.Normal(mu, sigma), name="x")(key)
 
 
-### Train
+# %%
+# Finally, we create the anneal inference program, define the loss function,
+# run the training loop, and plot the results.
 
 
 def make_anneal(params, unroll=False):

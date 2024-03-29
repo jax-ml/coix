@@ -13,8 +13,19 @@
 # limitations under the License.
 
 """
-BMNIST example in NumPyro
-=========================
+Example: Time Series Model - Bouncing MNIST in NumPyro
+======================================================
+
+This example illustrates how to construct an inference program based on the APGS
+sampler [1] for BMNIST. The details of BMNIST can be found in the sections
+6.4 and F.3 of the reference. We will use the NumPyro (default) backend for this
+example.
+
+**References**
+
+    1. Wu, Hao, et al. Amortized population Gibbs samplers with neural
+       sufficient statistics. ICML 2020.
+
 """
 
 # TODO: Refactor using numpyro backend. The current code is likely not working yet.
@@ -39,6 +50,9 @@ import numpyro.distributions as dist
 import optax
 import tensorflow as tf
 import tensorflow_datasets as tfds
+
+# %%
+# First, let's load the moving mnist dataset.
 
 batch_size = 5
 T = 10  # using 10 time steps for training and 20 time steps for testing
@@ -74,7 +88,9 @@ print("Frame size:", frame_size)
 print("Digit shape:", digit_mean.shape)
 
 
-### Autoencoder
+# %%
+# Next, we define the neural proposals for the Gibbs kernels and the neural
+# decoder for the generative model.
 
 
 def scale_and_translate(image, where, out_size):
@@ -191,7 +207,8 @@ class BMNISTAutoEncoder(nn.Module):
     return frames_recon
 
 
-### Model and kernels
+# %%
+# Then, we define the target and kernels as in Section 6.4.
 
 test_key = random.PRNGKey(0)
 test_data = jnp.zeros((frame_length,) + (frame_size, frame_size))
@@ -281,6 +298,10 @@ def kernel_what(network, key, inputs, T=10):
 _, k2_out = kernel_what(test_network, test_key, p_out, T=frame_length)
 
 
+# %%
+# Finally, we create the dmm inference program, define the loss function,
+# run the training loop, and plot the results.
+
 num_sweeps = 5
 num_particles = 10
 
@@ -295,9 +316,6 @@ def make_bmnist(params, T=10):
   kernels.append(jax.vmap(partial(kernel_what, network, T=T)))
   program = coix.algo.apgs(target, kernels, num_sweeps=num_sweeps)
   return program
-
-
-a
 
 
 def loss_fn(params, key, batch):
