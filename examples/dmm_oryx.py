@@ -44,7 +44,8 @@ import optax
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
-# Data
+# %%
+# First, let's simulate a synthetic dataset of 2D ring-shaped mixtures.
 
 
 def simulate_rings(num_instances=1, N=200, seed=0):
@@ -76,7 +77,9 @@ def load_dataset(split, *, is_training, batch_size):
   return iter(tfds.as_numpy(ds))
 
 
-### Autoencoder
+# %%
+# Next, we define the neural proposals for the Gibbs kernels and the neural
+# decoder for the generative model.
 
 
 class EncoderMu(nn.Module):
@@ -168,7 +171,8 @@ class DMMAutoEncoder(nn.Module):
     return x_recon
 
 
-### Model and kernels
+# %%
+# Then, we define the target and kernels as in Section 6.3.
 
 
 def dmm_target(network, key, inputs):

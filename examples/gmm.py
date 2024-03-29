@@ -45,9 +45,9 @@ import optax
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
-
 # %%
-# First, let's simulate a synthetic dataset of Gaussian clusters.
+# First, let's simulate a synthetic dataset of 2D Gaussian mixtures.
+
 
 def simulate_clusters(num_instances=1, N=60, seed=0):
   np.random.seed(seed)
@@ -80,6 +80,7 @@ def load_dataset(split, *, is_training, batch_size):
 
 # %%
 # Next, we define the neural proposals for the Gibbs kernels.
+
 
 class GMMEncoderMeanTau(nn.Module):
 
@@ -144,6 +145,7 @@ class GMMEncoder(nn.Module):
 # %%
 # Then, we define the target and kernels as in Section 6.2.
 
+
 def gmm_target(network, key, inputs):
   key_out, key_mean, key_tau, key_c = random.split(key, 4)
   N = inputs.shape[-2]
@@ -192,6 +194,7 @@ def gmm_kernel_c(network, key, inputs):
 # %%
 # Finally, we create the gmm inference program, define the loss function,
 # run the training loop, and plot the results.
+
 
 def make_gmm(params, num_sweeps):
   network = coix.util.BindModule(GMMEncoder(), params)

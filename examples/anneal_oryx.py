@@ -42,7 +42,8 @@ import numpyro
 import numpyro.distributions as dist
 import optax
 
-### Networks
+# %%
+# First, we define the neural networks for the targets and kernels.
 
 
 class AnnealKernel(nn.Module):
@@ -111,7 +112,8 @@ class AnnealNetwork(nn.Module):
     return self.forward_kernels(x)
 
 
-### Model and kernels
+# %%
+# Then, we define the targets and kernels as in Section E.1.
 
 
 def anneal_target(network, key, k=0):
@@ -131,7 +133,9 @@ def anneal_reverse(network, key, inputs, k=0):
   return coryx.rv(dist.Normal(mu, sigma), name="x")(key)
 
 
-### Train
+# %%
+# Finally, we create the anneal inference program, define the loss function,
+# run the training loop, and plot the results.
 
 
 def make_anneal(params, unroll=False):

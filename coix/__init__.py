@@ -28,8 +28,8 @@ from coix.core import empirical
 from coix.core import prng_key
 from coix.core import register_backend
 from coix.core import set_backend
-from coix.core import suffix
 from coix.core import stick_the_landing
+from coix.core import suffix
 from coix.core import traced_evaluate
 
 __all__ = [

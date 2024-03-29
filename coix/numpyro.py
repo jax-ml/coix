@@ -23,7 +23,6 @@ import numpyro
 from numpyro import handlers
 import numpyro.distributions as dist
 
-
 __all__ = [
     "detach",
     "empirical",
