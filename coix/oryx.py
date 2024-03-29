@@ -37,6 +37,7 @@ __all__ = [
     "detach",
     "empirical",
     "factor",
+    "prng_key",
     "rv",
     "stick_the_landing",
     "suffix",
@@ -449,3 +450,7 @@ def empirical(out, trace, metrics):
     return out
 
   return wrapped
+
+
+def prng_key():
+  raise ValueError("Cannot genenerate random key under the oryx backend.")

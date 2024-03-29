@@ -25,10 +25,10 @@ from coix.api import propose
 from coix.api import resample
 from coix.core import detach
 from coix.core import empirical
-from coix.core import factor
+from coix.core import prng_key
 from coix.core import register_backend
-from coix.core import rv
 from coix.core import set_backend
+from coix.core import suffix
 from coix.core import stick_the_landing
 from coix.core import traced_evaluate
 
@@ -39,16 +39,16 @@ __all__ = [
     "compose",
     "detach",
     "extend",
-    "factor",
     "fori_loop",
     "loss",
     "memoize",
+    "prng_key",
     "propose",
     "register_backend",
     "resample",
-    "rv",
     "set_backend",
     "stick_the_landing",
+    "suffix",
     "traced_evaluate",
     "util",
 ]

@@ -13,14 +13,25 @@
 # limitations under the License.
 
 """
-Example: GMM example in Oryx
-============================
+Example: Gaussian Mixture Model in Oryx
+=======================================
+
+This example illustrates how to construct an inference program for GMM, based on
+the APGS sampler [1]. The details of GMM can be found in the sections 6.2 and
+F.1 of the reference. We will use the Oryx backend for this example.
+
+**References**
+
+    1. Wu, Hao, et al. Amortized population Gibbs samplers with neural
+       sufficient statistics. ICML 2020.
+
 """
 
 import argparse
 from functools import partial
 
 import coix
+import coix.oryx as coryx
 import flax.linen as nn
 import jax
 from jax import random
@@ -34,8 +45,9 @@ import optax
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
-### Data
 
+# %%
+# First, let's simulate a synthetic dataset of Gaussian clusters.
 
 def simulate_clusters(num_instances=1, N=60, seed=0):
   np.random.seed(seed)
@@ -66,8 +78,8 @@ def load_dataset(split, *, is_training, batch_size):
   return iter(tfds.as_numpy(ds))
 
 
-### Encoder
-
+# %%
+# Next, we define the neural proposals for the Gibbs kernels.
 
 class GMMEncoderMeanTau(nn.Module):
 
@@ -129,17 +141,17 @@ class GMMEncoder(nn.Module):
     return self.encode_mean_tau(xc)
 
 
-### Model and kernels
-
+# %%
+# Then, we define the target and kernels as in Section 6.2.
 
 def gmm_target(network, key, inputs):
   key_out, key_mean, key_tau, key_c = random.split(key, 4)
   N = inputs.shape[-2]
 
-  tau = coix.rv(dist.Gamma(2, 2).expand([3, 2]), name="tau")(key_tau)
-  mean = coix.rv(dist.Normal(0, 1 / jnp.sqrt(tau * 0.1)), name="mean")(key_mean)
-  c = coix.rv(dist.DiscreteUniform(0, 3).expand([N]), name="c")(key_c)
-  x = coix.rv(dist.Normal(mean[c], 1 / jnp.sqrt(tau[c])), obs=inputs, name="x")
+  tau = coryx.rv(dist.Gamma(2, 2).expand([3, 2]), name="tau")(key_tau)
+  mean = coryx.rv(dist.Normal(0, 1 / jnp.sqrt(tau * 0.1)), name="mean")(key_mean)
+  c = coryx.rv(dist.DiscreteUniform(0, 3).expand([N]), name="c")(key_c)
+  x = coryx.rv(dist.Normal(mean[c], 1 / jnp.sqrt(tau[c])), obs=inputs, name="x")
 
   out = {"mean": mean, "tau": tau, "c": c, "x": x}
   return key_out, out
@@ -156,8 +168,8 @@ def gmm_kernel_mean_tau(network, key, inputs):
     alpha, beta, mu, nu = network.encode_mean_tau(xc)
   else:
     alpha, beta, mu, nu = network.encode_initial_mean_tau(inputs["x"])
-  tau = coix.rv(dist.Gamma(alpha, beta), name="tau")(key_tau)
-  mean = coix.rv(dist.Normal(mu, 1 / jnp.sqrt(tau * nu)), name="mean")(key_mean)
+  tau = coryx.rv(dist.Gamma(alpha, beta), name="tau")(key_tau)
+  mean = coryx.rv(dist.Normal(mu, 1 / jnp.sqrt(tau * nu)), name="mean")(key_mean)
 
   out = {**inputs, **{"mean": mean, "tau": tau}}
   return key_out, out
@@ -177,8 +189,9 @@ def gmm_kernel_c(network, key, inputs):
   return key_out, out
 
 
-### Train
-
+# %%
+# Finally, we create the gmm inference program, define the loss function,
+# run the training loop, and plot the results.
 
 def make_gmm(params, num_sweeps):
   network = coix.util.BindModule(GMMEncoder(), params)

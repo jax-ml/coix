@@ -13,8 +13,17 @@
 # limitations under the License.
 
 """
-Example: Anneal example in NumPyro
-==================================
+Example: Annealed Variational Inference in NumPyro
+==================================================
+
+This example illustrates how to construct an inference program based on the NVI
+algorithm [1] for AVI. The details of AVI can be found in the sections E.1 of
+the reference. We will use the NumPyro (default) backend for this example.
+
+**References**
+
+    1. Zimmermann, Heiko, et al. "Nested variational inference." NeuRIPS 2021.
+
 """
 
 import argparse

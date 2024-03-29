@@ -23,6 +23,16 @@ import numpyro
 from numpyro import handlers
 import numpyro.distributions as dist
 
+
+__all__ = [
+    "detach",
+    "empirical",
+    "prng_key",
+    "stick_the_landing",
+    "suffix",
+    "traced_evaluate",
+]
+
 prng_key = numpyro.prng_key
 
 
