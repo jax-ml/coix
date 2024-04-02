@@ -202,7 +202,7 @@ def main(args):
 
   plt.figure(figsize=(8, 8))
   x = trace["x"]["value"].reshape((-1, 2))
-  H, xedges, yedges = np.histogram2d(x[:, 0], x[:, 1], bins=100)
+  H, _, _ = np.histogram2d(x[:, 0], x[:, 1], bins=100)
   plt.imshow(H.T)
   plt.show()
 

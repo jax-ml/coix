@@ -42,7 +42,6 @@ import numpyro
 import numpyro.distributions as dist
 import optax
 import tensorflow as tf
-import tensorflow_datasets as tfds
 
 # %%
 # First, let's simulate a synthetic dataset of 2D ring-shaped mixtures.
@@ -65,16 +64,21 @@ def simulate_rings(num_instances=1, N=200, seed=0):
 
 
 def load_dataset(split, *, is_training, batch_size):
-  num_data = 20000 if is_training else batch_size
-  num_points = 200 if is_training else 600
-  seed = 0 if is_training else 1
+  if split == "train":
+    num_data = 20000
+    num_points = 200
+    seed = 0
+  else:
+    num_data = batch_size
+    num_points = 600
+    seed = 1
   data = simulate_rings(num_data, num_points, seed=seed)
   ds = tf.data.Dataset.from_tensor_slices(data)
-  ds = ds.cache().repeat()
-  if is_training:
+  ds = ds.repeat()
+  if split == "train":
     ds = ds.shuffle(10 * batch_size, seed=0)
   ds = ds.batch(batch_size)
-  return iter(tfds.as_numpy(ds))
+  return ds.as_numpy_iterator()
 
 
 # %%
@@ -154,8 +158,7 @@ class DMMAutoEncoder(nn.Module):
     # Heuristic procedure to setup initial parameters.
     mu, _ = self.encode_initial_mu(x)  # M x D
 
-    concatenate_fn = lambda x, m: jnp.concatenate([x, m], axis=-1)
-    xmu = jax.vmap(jax.vmap(concatenate_fn, (None, 0)), (0, None))(x, mu)
+    xmu = jnp.expand_dims(x, -2) - mu
     logits = self.encode_c(xmu)  # N x M
     c = jnp.argmax(logits, -1)  # N
 
@@ -195,9 +198,10 @@ def dmm_kernel_mu(network, key, inputs):
   key_out, key_mu = random.split(key)
 
   if "c" in inputs:
+    x = inputs["x"]
     c = jax.nn.one_hot(inputs["c"], 4)
     h = jnp.expand_dims(inputs["h"], -1)
-    xch = jnp.concatenate([inputs["x"], c, h], -1)
+    xch = jnp.concatenate([x, c, h], -1)
     loc, scale = network.encode_mu(xch)
   else:
     loc, scale = network.encode_initial_mu(inputs["x"])
@@ -210,13 +214,11 @@ def dmm_kernel_mu(network, key, inputs):
 def dmm_kernel_c_h(network, key, inputs):
   key_out, key_c, key_h = random.split(key, 3)
 
-  concatenate_fn = lambda x, m: jnp.concatenate([x, m], axis=-1)
-  xmu = jax.vmap(jax.vmap(concatenate_fn, (None, 0)), (0, None))(
-      inputs["x"], inputs["mu"]
-  )
+  x, mu = inputs["x"], inputs["mu"]
+  xmu = jnp.expand_dims(x, -2) - mu
   logits = network.encode_c(xmu)
   c = coryx.rv(dist.Categorical(logits=logits), name="c")(key_c)
-  alpha, beta = network.encode_h(inputs["x"] - inputs["mu"][c])
+  alpha, beta = network.encode_h(x - mu[c])
   h = coryx.rv(dist.Beta(alpha, beta), name="h")(key_h)
 
   out = {**inputs, **{"c": c, "h": h}}

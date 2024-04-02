@@ -42,7 +42,6 @@ import numpyro.distributions as dist
 from numpyro.ops.indexing import Vindex
 import optax
 import tensorflow as tf
-import tensorflow_datasets as tfds
 
 # %%
 # First, let's simulate a synthetic dataset of 2D ring-shaped mixtures.
@@ -64,17 +63,22 @@ def simulate_rings(num_instances=1, N=200, seed=0):
   return np.take_along_axis(x, shuffle_idx, axis=1)
 
 
-def load_dataset(split, *, is_training, batch_size):
-  num_data = 20000 if is_training else batch_size
-  num_points = 200 if is_training else 600
-  seed = 0 if is_training else 1
+def load_dataset(split, *, batch_size):
+  if split == "train":
+    num_data = 20000
+    num_points = 200
+    seed = 0
+  else:
+    num_data = batch_size
+    num_points = 600
+    seed = 1
   data = simulate_rings(num_data, num_points, seed=seed)
   ds = tf.data.Dataset.from_tensor_slices(data)
   ds = ds.repeat()
-  if is_training:
+  if split == "train":
     ds = ds.shuffle(10 * batch_size, seed=0)
   ds = ds.batch(batch_size)
-  return iter(tfds.as_numpy(ds))
+  return ds.as_numpy_iterator()
 
 
 # %%
@@ -155,8 +159,6 @@ class DMMAutoEncoder(nn.Module):
     # Heuristic procedure to setup initial parameters.
     mu, _ = self.encode_initial_mu(x)  # M x D
 
-    # concatenate_fn = lambda x, m: jnp.concatenate([x, m], axis=-1)
-    # xmu = jax.vmap(jax.vmap(concatenate_fn, (None, 0)), (0, None))(x, mu)
     xmu = jnp.expand_dims(x, -2) - mu
     logits = self.encode_c(xmu)  # N x M
     c = jnp.argmax(logits, -1)  # N
@@ -178,7 +180,7 @@ class DMMAutoEncoder(nn.Module):
 
 
 def dmm_target(network, inputs):
-  mu = numpyro.sample("mu", dist.Normal(0, 10).expand([4, 2 ]).to_event())
+  mu = numpyro.sample("mu", dist.Normal(0, 10).expand([4, 2]).to_event())
   with numpyro.plate("N", inputs.shape[-2], dim=-1):
     c = numpyro.sample("c", dist.Categorical(probs=jnp.ones(4) / 4))
     h = numpyro.sample("h", dist.Beta(1, 1))
@@ -186,7 +188,7 @@ def dmm_target(network, inputs):
     x = numpyro.sample("x", dist.Normal(x_recon, 0.1).to_event(1), obs=inputs)
 
   out = {"mu": mu, "c": c, "h": h, "x_recon": x_recon, "x": x}
-  return out,
+  return (out,)
 
 
 def dmm_kernel_mu(network, inputs):
@@ -205,7 +207,7 @@ def dmm_kernel_mu(network, inputs):
   mu = numpyro.sample("mu", dist.Normal(loc, scale).to_event(2))
 
   out = {**inputs, **{"mu": mu}}
-  return out,
+  return (out,)
 
 
 def dmm_kernel_c_h(network, inputs):
@@ -218,7 +220,7 @@ def dmm_kernel_c_h(network, inputs):
     h = numpyro.sample("h", dist.Beta(alpha, beta))
 
   out = {**inputs, **{"c": c, "h": h}}
-  return out,
+  return (out,)
 
 
 # %%
@@ -258,8 +260,8 @@ def main(args):
   num_sweeps = args.num_sweeps
   num_particles = args.num_particles
 
-  train_ds = load_dataset("train", is_training=True, batch_size=batch_size)
-  test_ds = load_dataset("test", is_training=False, batch_size=batch_size)
+  train_ds = load_dataset("train", batch_size=batch_size)
+  test_ds = load_dataset("test", batch_size=batch_size)
 
   init_params = DMMAutoEncoder().init(
       jax.random.PRNGKey(0), jnp.zeros((200, 2))
@@ -273,23 +275,25 @@ def main(args):
   )
 
   program = make_dmm(dmm_params, num_sweeps)
+  next(test_ds)
+  next(test_ds)
   batch = next(test_ds)
   out, _, _ = coix.traced_evaluate(program, seed=jax.random.PRNGKey(1))(batch)
+  out = out[0]
 
-  fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+  _, axes = plt.subplots(2, 3, figsize=(15, 10))
   for i in range(3):
-    n = i
-    axes[0][i].scatter(out["x"][n, 0, :, 0], out["x"][n, 0, :, 1], marker=".")
+    axes[0][i].scatter(out["x"][i, :, 0], out["x"][i, :, 1], marker=".")
     axes[1][i].scatter(
-        out["x_recon"][n, 0, :, 0],
-        out["x_recon"][n, 0, :, 1],
-        c=out["c"][n, 0],
+        out["x_recon"][0, i, :, 0],
+        out["x_recon"][0, i, :, 1],
+        c=out["c"][0, i],
         cmap="Accent",
         marker=".",
     )
     axes[1][i].scatter(
-        out["mu"][n, 0, :, 0],
-        out["mu"][n, 0, :, 1],
+        out["mu"][0, i, 0, :, 0],
+        out["mu"][0, i, 0, :, 1],
         c=range(4),
         marker="x",
         cmap="Accent",

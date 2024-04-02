@@ -52,7 +52,11 @@ def traced_evaluate(p, latents=None, seed=None):
         value = site["value"]
         log_prob = site["fn"].log_prob(value)
         event_dim_holder = jnp.empty([1] * site["fn"].event_dim)
-        trace[name] = {"value": value, "log_prob": log_prob, "_event_dim_holder": event_dim_holder}
+        trace[name] = {
+            "value": value,
+            "log_prob": log_prob,
+            "_event_dim_holder": event_dim_holder,
+        }
         if site.get("is_observed", False):
           trace[name]["is_observed"] = True
     metrics = {

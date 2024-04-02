@@ -46,7 +46,6 @@ import numpyro
 import numpyro.distributions as dist
 import optax
 import tensorflow as tf
-import tensorflow_datasets as tfds
 
 # %%
 # First, let's simulate a synthetic dataset of Gaussian clusters.
@@ -65,20 +64,25 @@ def simulate_clusters(num_instances=1, N=60, seed=0):
   return x, c
 
 
-def load_dataset(split, *, is_training, batch_size):
-  num_data = 20000 if is_training else batch_size
-  num_points = 60 if is_training else 100
-  seed = 0 if is_training else 1
+def load_dataset(split, *, batch_size):
+  if split == "train":
+    num_data = 20000
+    num_points = 60
+    seed = 0
+  else:
+    num_data = batch_size
+    num_points = 100
+    seed = 1
   data, label = simulate_clusters(num_data, num_points, seed=seed)
-  if is_training:
+  if split == "train":
     ds = tf.data.Dataset.from_tensor_slices(data)
-    ds = ds.cache().repeat()
+    ds = ds.repeat()
     ds = ds.shuffle(10 * batch_size, seed=0)
   else:
     ds = tf.data.Dataset.from_tensor_slices((data, label))
-    ds = ds.cache().repeat()
+    ds = ds.repeat()
   ds = ds.batch(batch_size)
-  return iter(tfds.as_numpy(ds))
+  return ds.as_numpy_iterator()
 
 
 # %%
@@ -239,8 +243,8 @@ def main(args):
   num_sweeps = args.num_sweeps
   num_particles = args.num_particles
 
-  train_ds = load_dataset("train", is_training=True, batch_size=batch_size)
-  test_ds = load_dataset("test", is_training=False, batch_size=batch_size)
+  train_ds = load_dataset("train", batch_size=batch_size)
+  test_ds = load_dataset("test", batch_size=batch_size)
 
   init_params = GMMEncoder().init(jax.random.PRNGKey(0), jnp.zeros((60, 2)))
   gmm_params, _ = coix.util.train(
