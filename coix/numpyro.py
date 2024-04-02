@@ -51,7 +51,8 @@ def traced_evaluate(p, latents=None, seed=None):
       if site["type"] == "sample":
         value = site["value"]
         log_prob = site["fn"].log_prob(value)
-        trace[name] = {"value": value, "log_prob": log_prob}
+        event_dim_holder = jnp.empty([1] * site["fn"].event_dim)
+        trace[name] = {"value": value, "log_prob": log_prob, "_event_dim_holder": event_dim_holder}
         if site.get("is_observed", False):
           trace[name]["is_observed"] = True
     metrics = {
@@ -83,7 +84,7 @@ def empirical(out, trace, metrics):
     del args, kwargs
     for name, site in trace.items():
       value, lp = site["value"], site["log_prob"]
-      event_dim = jnp.ndim(value) - jnp.ndim(lp)
+      event_dim = jnp.ndim(site["_event_dim_holder"])
       obs = value if "is_observed" in site else None
       numpyro.sample(name, dist.Delta(value, lp, event_dim=event_dim), obs=obs)
     for name, value in metrics.items():

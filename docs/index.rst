@@ -32,9 +32,9 @@ Coix Documentation
    examples/gmm
    examples/dmm
    examples/bmnist
+   examples/anneal_oryx
    examples/gmm_oryx
    examples/dmm_oryx
-   examples/anneal_oryx
 
 Indices and tables
 ==================

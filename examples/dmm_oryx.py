@@ -223,7 +223,10 @@ def dmm_kernel_c_h(network, key, inputs):
   return key_out, out
 
 
-### Train
+# %%
+# Finally, we create the dmm inference program, define the loss function,
+# run the training loop, and plot the results. Note that we are using
+# 10x less steps than the paper.
 
 
 def make_dmm(params, num_sweeps):
@@ -282,7 +285,6 @@ def main(args):
       random.split(jax.random.PRNGKey(1), batch.shape[0])
   )
   _, out = jax.vmap(program)(rng_keys, batch)
-  batch.shape, out["x_recon"].shape
 
   fig, axes = plt.subplots(2, 3, figsize=(15, 10))
   for i in range(3):
@@ -308,10 +310,10 @@ def main(args):
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Annealing example")
   parser.add_argument("--batch-size", nargs="?", default=20, type=int)
-  parser.add_argument("--num-sweeps", nargs="?", default=5, type=int)
+  parser.add_argument("--num-sweeps", nargs="?", default=8, type=int)
   parser.add_argument("--num_particles", nargs="?", default=10, type=int)
   parser.add_argument("--learning-rate", nargs="?", default=1e-4, type=float)
-  parser.add_argument("--num-steps", nargs="?", default=300000, type=int)
+  parser.add_argument("--num-steps", nargs="?", default=30000, type=int)
   parser.add_argument(
       "--device", default="gpu", type=str, help='use "cpu" or "gpu".'
   )

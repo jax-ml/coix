@@ -24,6 +24,9 @@ the reference. We will use the NumPyro (default) backend for this example.
 
     1. Zimmermann, Heiko, et al. "Nested variational inference." NeuRIPS 2021.
 
+.. image:: ../_static/anneal.png
+    :align: center
+
 """
 
 import argparse

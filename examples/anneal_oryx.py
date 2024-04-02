@@ -24,6 +24,9 @@ the reference. We will use the Oryx backend for this example.
 
     1. Zimmermann, Heiko, et al. "Nested variational inference." NeuRIPS 2021.
 
+.. image:: ../_static/anneal_oryx.png
+    :align: center
+
 """
 
 import argparse
@@ -119,7 +122,7 @@ class AnnealNetwork(nn.Module):
 def anneal_target(network, key, k=0):
   key_out, key = random.split(key)
   x = coryx.rv(dist.Normal(0, 5).expand([2]).mask(False), name="x")(key)
-  coix.factor(network.anneal_density(x, index=k), name="anneal_density")
+  coryx.factor(network.anneal_density(x, index=k), name="anneal_density")
   return key_out, {"x": x}
 
 
