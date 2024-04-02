@@ -142,7 +142,7 @@ class DecoderH(nn.Module):
     x = nn.tanh(x)
     x = nn.Dense(2)(x)
     angle = x / jnp.linalg.norm(x, axis=-1, keepdims=True)
-    radius = self.param("radius", nn.initializers.ones, (1,))
+    radius = 1.  # self.param("radius", nn.initializers.ones, (1,))
     return radius * angle
 
 
@@ -274,9 +274,7 @@ def main(args):
       train_ds,
   )
 
-  program = make_dmm(dmm_params, num_sweeps)
-  next(test_ds)
-  next(test_ds)
+  program = make_dmm(dmm_params, num_sweeps, num_particles)
   batch = next(test_ds)
   out, _, _ = coix.traced_evaluate(program, seed=jax.random.PRNGKey(1))(batch)
   out = out[0]

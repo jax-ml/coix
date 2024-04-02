@@ -40,6 +40,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpyro
 import numpyro.distributions as dist
+from numpyro.ops.indexing import Vindex
 import optax
 import tensorflow as tf
 
@@ -149,17 +150,29 @@ class GMMEncoder(nn.Module):
 # Then, we define the target and kernels as in Section 6.2.
 
 
-def gmm_target(network, key, inputs):
-  key_out, key_mean, key_tau, key_c = random.split(key, 4)
-  N = inputs.shape[-2]
-
-  tau = coix.rv(dist.Gamma(2, 2).expand([3, 2]), name="tau")(key_tau)
-  mean = coix.rv(dist.Normal(0, 1 / jnp.sqrt(tau * 0.1)), name="mean")(key_mean)
-  c = coix.rv(dist.DiscreteUniform(0, 3).expand([N]), name="c")(key_c)
-  x = coix.rv(dist.Normal(mean[c], 1 / jnp.sqrt(tau[c])), obs=inputs, name="x")
+def gmm_target(network, inputs):
+  with numpyro.plate("N", inputs.shape[-2], dim=-1):
+    tau = numpyro.sample("tau", dist.Gamma(2, 2).expand([3, 2]).to_event())
+    mean = numpyro.sample("mean", dist.Normal(0, 1 / jnp.sqrt(tau * 0.1)))
+    c = numpyro.sample("c", dist.Categorical(probs=jnp.ones(4) / 4))
+    loc = Vindex(mean)[..., c, :]
+    scale = 1 / jnp.sqrt(Vindex(tau)[..., c, :])
+    x = numpyro.sample("x", dist.Normal(loc, scale).to_event(1), obs=inputs)
 
   out = {"mean": mean, "tau": tau, "c": c, "x": x}
-  return key_out, out
+  return out,
+
+
+def dmm_target(network, inputs):
+  mu = numpyro.sample("mu", dist.Normal(0, 10).expand([4, 2]).to_event())
+  with numpyro.plate("N", inputs.shape[-2], dim=-1):
+    c = numpyro.sample("c", dist.Categorical(probs=jnp.ones(4) / 4))
+    h = numpyro.sample("h", dist.Beta(1, 1))
+    x_recon = network.decode_h(h) + Vindex(mu)[..., c, :]
+    x = numpyro.sample("x", dist.Normal(x_recon, 0.1).to_event(1), obs=inputs)
+
+  out = {"mu": mu, "c": c, "h": h, "x_recon": x_recon, "x": x}
+  return (out,)
 
 
 def gmm_kernel_mean_tau(network, key, inputs):
