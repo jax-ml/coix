@@ -25,6 +25,9 @@ example.
     1. Wu, Hao, et al. Amortized population Gibbs samplers with neural
        sufficient statistics. ICML 2020.
 
+.. image:: ../_static/dmm.png
+    :align: center
+
 """
 
 import argparse
@@ -142,7 +145,7 @@ class DecoderH(nn.Module):
     x = nn.tanh(x)
     x = nn.Dense(2)(x)
     angle = x / jnp.linalg.norm(x, axis=-1, keepdims=True)
-    radius = 1.  # self.param("radius", nn.initializers.ones, (1,))
+    radius = 1.0  # self.param("radius", nn.initializers.ones, (1,))
     return radius * angle
 
 

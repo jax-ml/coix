@@ -25,6 +25,9 @@ F.2 of the reference. We will use the Oryx backend for this example.
     1. Wu, Hao, et al. Amortized population Gibbs samplers with neural
        sufficient statistics. ICML 2020.
 
+.. image:: ../_static/dmm_oryx.png
+    :align: center
+
 """
 
 import argparse

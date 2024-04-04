@@ -28,8 +28,6 @@ example.
 
 """
 
-# TODO: Refactor using numpyro backend. The current code is likely not working yet.
-
 import argparse
 from functools import partial
 import sys

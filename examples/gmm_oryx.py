@@ -124,6 +124,12 @@ class GMMEncoderC(nn.Module):
     return logits + jnp.log(jnp.ones(3) / 3)
 
 
+def broadcast_concatenate(*xs):
+  shape = jnp.broadcast_shapes(*[x.shape[:-1] for x in xs])
+  xs = [jnp.broadcast_to(x, shape + x.shape[-1:]) for x in xs]
+  return jnp.concatenate(xs, -1)
+
+
 class GMMEncoder(nn.Module):
 
   def setup(self):
@@ -136,12 +142,7 @@ class GMMEncoder(nn.Module):
     alpha, beta, mean, _ = self.encode_initial_mean_tau(x)  # M x D
     tau = alpha / beta  # M x D
 
-    concatenate_fn = lambda x, m, t: jnp.concatenate(
-        [x, m, t], axis=-1
-    )  # N x M x 3D
-    xmt = jax.vmap(
-        jax.vmap(concatenate_fn, in_axes=(None, 0, 0)), in_axes=(0, None, None)
-    )(x, mean, tau)
+    xmt = jax.vmap(broadcast_concatenate, (None, -2, -2), -2)(x, mean, tau)
     logits = self.encode_c(xmt)  # N x D
     c = jnp.argmax(logits, -1)  # N
 
@@ -174,8 +175,9 @@ def gmm_kernel_mean_tau(network, key, inputs):
   key_out, key_mean, key_tau = random.split(key, 3)
 
   if "c" in inputs:
+    x = inputs["x"]
     c = jax.nn.one_hot(inputs["c"], 3)
-    xc = jnp.concatenate([inputs["x"], c], -1)
+    xc = jnp.concatenate([x, c], -1)
     alpha, beta, mu, nu = network.encode_mean_tau(xc)
   else:
     alpha, beta, mu, nu = network.encode_initial_mean_tau(inputs["x"])
@@ -191,10 +193,8 @@ def gmm_kernel_mean_tau(network, key, inputs):
 def gmm_kernel_c(network, key, inputs):
   key_out, key_c = random.split(key, 2)
 
-  concatenate_fn = lambda x, m, t: jnp.concatenate([x, m, t], axis=-1)
-  xmt = jax.vmap(
-      jax.vmap(concatenate_fn, in_axes=(None, 0, 0)), in_axes=(0, None, None)
-  )(inputs["x"], inputs["mean"], inputs["tau"])
+  x, mean, tau = inputs["x"], inputs["mean"], inputs["tau"]
+  xmt = jax.vmap(broadcast_concatenate, (None, -2, -2), -2)(x, mean, tau)
   logits = network.encode_c(xmt)
   c = coryx.rv(dist.Categorical(logits=logits), name="c")(key_c)
 
@@ -263,24 +263,23 @@ def main(args):
   )
   _, out = jax.vmap(program)(rng_keys, batch)
 
-  fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-  for i in range(3):
-    n = i
-    axes[i].scatter(
-        batch[n, 0, :, 0],
-        batch[n, 0, :, 1],
+  _, axes = plt.subplots(2, 3, figsize=(15, 10))
+  for i in range(6):
+    axes[i // 3][i % 3].scatter(
+        batch[i, 0, :, 0],
+        batch[i, 0, :, 1],
         marker=".",
-        color=np.array(["c", "m", "y"])[label[n]],
+        color=np.array(["c", "m", "y"])[label[i]],
     )
     for j, c in enumerate(["r", "g", "b"]):
       ellipse = Ellipse(
-          xy=(out["mean"][n, 0, j, 0], out["mean"][n, 0, j, 1]),
-          width=4 / jnp.sqrt(out["tau"][n, 0, j, 0]),
-          height=4 / jnp.sqrt(out["tau"][n, 0, j, 1]),
+          xy=(out["mean"][i, 0, j, 0], out["mean"][i, 0, j, 1]),
+          width=4 / jnp.sqrt(out["tau"][i, 0, j, 0]),
+          height=4 / jnp.sqrt(out["tau"][i, 0, j, 1]),
           fc=c,
           alpha=0.3,
       )
-      axes[i].add_patch(ellipse)
+      axes[i // 3][i % 3].add_patch(ellipse)
   plt.show()
 
 
