@@ -30,6 +30,9 @@ F.2 of the reference. We will use the Oryx backend for this example.
 
 """
 
+# %%
+# **Note:** The metrics seem to be incorrect in this example.
+
 import argparse
 from functools import partial
 
@@ -120,7 +123,7 @@ class EncoderC(nn.Module):
   @nn.compact
   def __call__(self, x):
     x = nn.Dense(32)(x)
-    x = nn.tanh(x)
+    x = nn.relu(x)  # nn.tanh(x)
     logits = nn.Dense(1)(x).squeeze(-1)
     return logits + jnp.log(jnp.ones(4) / 4)
 
@@ -145,7 +148,8 @@ class DecoderH(nn.Module):
     x = nn.tanh(x)
     x = nn.Dense(2)(x)
     angle = x / jnp.linalg.norm(x, axis=-1, keepdims=True)
-    return angle
+    radius = 1.0  # self.param("radius", nn.initializers.ones, (1,))
+    return radius * angle
 
 
 class DMMAutoEncoder(nn.Module):
@@ -317,7 +321,7 @@ if __name__ == "__main__":
   parser.add_argument("--batch-size", nargs="?", default=20, type=int)
   parser.add_argument("--num-sweeps", nargs="?", default=8, type=int)
   parser.add_argument("--num_particles", nargs="?", default=10, type=int)
-  parser.add_argument("--learning-rate", nargs="?", default=1e-4, type=float)
+  parser.add_argument("--learning-rate", nargs="?", default=1e-3, type=float)
   parser.add_argument("--num-steps", nargs="?", default=30000, type=int)
   parser.add_argument(
       "--device", default="gpu", type=str, help='use "cpu" or "gpu".'

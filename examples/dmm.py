@@ -120,7 +120,7 @@ class EncoderC(nn.Module):
   @nn.compact
   def __call__(self, x):
     x = nn.Dense(32)(x)
-    x = nn.tanh(x)
+    x = nn.relu(x)  # nn.tanh(x)
     logits = nn.Dense(1)(x).squeeze(-1)
     return logits + jnp.log(jnp.ones(4) / 4)
 
@@ -307,7 +307,7 @@ if __name__ == "__main__":
   parser.add_argument("--batch-size", nargs="?", default=20, type=int)
   parser.add_argument("--num-sweeps", nargs="?", default=5, type=int)
   parser.add_argument("--num_particles", nargs="?", default=10, type=int)
-  parser.add_argument("--learning-rate", nargs="?", default=1e-4, type=float)
+  parser.add_argument("--learning-rate", nargs="?", default=1e-3, type=float)
   parser.add_argument("--num-steps", nargs="?", default=30000, type=int)
   parser.add_argument(
       "--device", default="gpu", type=str, help='use "cpu" or "gpu".'

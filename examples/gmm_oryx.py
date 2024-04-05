@@ -30,6 +30,9 @@ F.1 of the reference. We will use the Oryx backend for this example.
 
 """
 
+# %%
+# **Note:** The metrics seem to be incorrect in this example.
+
 import argparse
 from functools import partial
 

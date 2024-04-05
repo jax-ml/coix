@@ -207,11 +207,13 @@ for src_file in glob.glob("../notebooks/*.ipynb") + glob.glob(
 ):
   toctree_path = "notebooks/" if src_file.endswith("ipynb") else "examples/"
   filename = os.path.splitext(src_file.split("/")[-1])[0]
-  png_path = "_static/" + filename + ".png"
+  img_path = "_static/" + filename + ".png"
   # use Coix logo if not exist png file
-  if not os.path.exists(png_path):
-    png_path = "_static/coix_logo.png"
-  nbsphinx_thumbnails[toctree_path + filename] = png_path
+  if not os.path.exists(img_path):
+    img_path = "_static/" + filename + ".gif"
+    if not os.path.exists(img_path):
+      img_path = "_static/coix_logo.png"
+  nbsphinx_thumbnails[toctree_path + filename] = img_path
 
 
 # -- Options for HTML output -------------------------------------------------
