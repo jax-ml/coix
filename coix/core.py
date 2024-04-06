@@ -137,10 +137,12 @@ def traced_evaluate(p, latents=None, seed=None, **kwargs):
 
 
 def empirical(out, trace, metrics):
+  """Creates an empirical program given a trace."""
   return get_backend()["empirical"](out, trace, metrics)
 
 
 def suffix(p):
+  """Adds suffix `_PREV_` to variable names of `p`."""
   fn = get_backend()["suffix"]
   if fn is not None:
     return fn(p)
@@ -149,6 +151,7 @@ def suffix(p):
 
 
 def detach(p):
+  """Makes random variables in `p` become non-reparameterized."""
   fn = get_backend()["detach"]
   if fn is not None:
     return fn(p)
@@ -157,6 +160,7 @@ def detach(p):
 
 
 def stick_the_landing(p):
+  """Stops gradient of distributions' parameters before computing log prob."""
   fn = get_backend()["stick_the_landing"]
   if fn is not None:
     return fn(p)
@@ -165,6 +169,7 @@ def stick_the_landing(p):
 
 
 def prng_key():
+  """Generates a random JAX PRNGKey."""
   fn = get_backend()["prng_key"]
   if fn is not None:
     return fn()

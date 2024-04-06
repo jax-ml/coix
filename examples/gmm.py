@@ -25,6 +25,9 @@ example.
     1. Wu, Hao, et al. Amortized population Gibbs samplers with neural
        sufficient statistics. ICML 2020.
 
+.. image:: ../_static/gmm_oryx.png
+    :align: center
+
 """
 
 import argparse
@@ -40,9 +43,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpyro
 import numpyro.distributions as dist
+from numpyro.ops.indexing import Vindex
 import optax
 import tensorflow as tf
-import tensorflow_datasets as tfds
 
 # %%
 # First, let's simulate a synthetic dataset of 2D Gaussian mixtures.
@@ -61,20 +64,25 @@ def simulate_clusters(num_instances=1, N=60, seed=0):
   return x, c
 
 
-def load_dataset(split, *, is_training, batch_size):
-  num_data = 20000 if is_training else batch_size
-  num_points = 60 if is_training else 100
-  seed = 0 if is_training else 1
+def load_dataset(split, *, batch_size):
+  if split == "train":
+    num_data = 20000
+    num_points = 60
+    seed = 0
+  else:
+    num_data = batch_size
+    num_points = 100
+    seed = 1
   data, label = simulate_clusters(num_data, num_points, seed=seed)
-  if is_training:
+  if split == "train":
     ds = tf.data.Dataset.from_tensor_slices(data)
-    ds = ds.cache().repeat()
+    ds = ds.repeat()
     ds = ds.shuffle(10 * batch_size, seed=0)
   else:
     ds = tf.data.Dataset.from_tensor_slices((data, label))
-    ds = ds.cache().repeat()
+    ds = ds.repeat()
   ds = ds.batch(batch_size)
-  return iter(tfds.as_numpy(ds))
+  return ds.as_numpy_iterator()
 
 
 # %%
@@ -116,6 +124,12 @@ class GMMEncoderC(nn.Module):
     return logits + jnp.log(jnp.ones(3) / 3)
 
 
+def broadcast_concatenate(*xs):
+  shape = jnp.broadcast_shapes(*[x.shape[:-1] for x in xs])
+  xs = [jnp.broadcast_to(x, shape + x.shape[-1:]) for x in xs]
+  return jnp.concatenate(xs, -1)
+
+
 class GMMEncoder(nn.Module):
 
   def setup(self):
@@ -128,12 +142,7 @@ class GMMEncoder(nn.Module):
     alpha, beta, mean, _ = self.encode_initial_mean_tau(x)  # M x D
     tau = alpha / beta  # M x D
 
-    concatenate_fn = lambda x, m, t: jnp.concatenate(
-        [x, m, t], axis=-1
-    )  # N x M x 3D
-    xmt = jax.vmap(
-        jax.vmap(concatenate_fn, in_axes=(None, 0, 0)), in_axes=(0, None, None)
-    )(x, mean, tau)
+    xmt = jax.vmap(broadcast_concatenate, (None, -2, -2), -2)(x, mean, tau)
     logits = self.encode_c(xmt)  # N x D
     c = jnp.argmax(logits, -1)  # N
 
@@ -145,49 +154,53 @@ class GMMEncoder(nn.Module):
 # Then, we define the target and kernels as in Section 6.2.
 
 
-def gmm_target(network, key, inputs):
-  key_out, key_mean, key_tau, key_c = random.split(key, 4)
-  N = inputs.shape[-2]
-
-  tau = coix.rv(dist.Gamma(2, 2).expand([3, 2]), name="tau")(key_tau)
-  mean = coix.rv(dist.Normal(0, 1 / jnp.sqrt(tau * 0.1)), name="mean")(key_mean)
-  c = coix.rv(dist.DiscreteUniform(0, 3).expand([N]), name="c")(key_c)
-  x = coix.rv(dist.Normal(mean[c], 1 / jnp.sqrt(tau[c])), obs=inputs, name="x")
+def gmm_target(inputs):
+  tau = numpyro.sample("tau", dist.Gamma(2, 2).expand([3, 2]).to_event())
+  mean = numpyro.sample(
+      "mean", dist.Normal(0, 1 / jnp.sqrt(tau * 0.1)).to_event()
+  )
+  with numpyro.plate("N", inputs.shape[-2], dim=-1):
+    c = numpyro.sample("c", dist.Categorical(probs=jnp.ones(4) / 4))
+    loc = Vindex(mean)[..., c, :]
+    scale = 1 / jnp.sqrt(Vindex(tau)[..., c, :])
+    x = numpyro.sample("x", dist.Normal(loc, scale).to_event(1), obs=inputs)
 
   out = {"mean": mean, "tau": tau, "c": c, "x": x}
-  return key_out, out
+  return (out,)
 
 
-def gmm_kernel_mean_tau(network, key, inputs):
+def gmm_kernel_mean_tau(network, inputs):
   if not isinstance(inputs, dict):
     inputs = {"x": inputs}
-  key_out, key_mean, key_tau = random.split(key, 3)
 
   if "c" in inputs:
+    x = inputs["x"]
     c = jax.nn.one_hot(inputs["c"], 3)
-    xc = jnp.concatenate([inputs["x"], c], -1)
+    xc = broadcast_concatenate(x, c)
     alpha, beta, mu, nu = network.encode_mean_tau(xc)
   else:
     alpha, beta, mu, nu = network.encode_initial_mean_tau(inputs["x"])
-  tau = coix.rv(dist.Gamma(alpha, beta), name="tau")(key_tau)
-  mean = coix.rv(dist.Normal(mu, 1 / jnp.sqrt(tau * nu)), name="mean")(key_mean)
+  alpha, beta, mu, nu = jax.tree_util.tree_map(
+      lambda x: jnp.expand_dims(x, -3), (alpha, beta, mu, nu)
+  )
+  tau = numpyro.sample("tau", dist.Gamma(alpha, beta).to_event(2))
+  mean = numpyro.sample(
+      "mean", dist.Normal(mu, 1 / jnp.sqrt(tau * nu)).to_event(2)
+  )
 
   out = {**inputs, **{"mean": mean, "tau": tau}}
-  return key_out, out
+  return (out,)
 
 
-def gmm_kernel_c(network, key, inputs):
-  key_out, key_c = random.split(key, 2)
-
-  concatenate_fn = lambda x, m, t: jnp.concatenate([x, m, t], axis=-1)
-  xmt = jax.vmap(
-      jax.vmap(concatenate_fn, in_axes=(None, 0, 0)), in_axes=(0, None, None)
-  )(inputs["x"], inputs["mean"], inputs["tau"])
+def gmm_kernel_c(network, inputs):
+  x, mean, tau = inputs["x"], inputs["mean"], inputs["tau"]
+  xmt = jax.vmap(broadcast_concatenate, (None, -2, -2), -2)(x, mean, tau)
   logits = network.encode_c(xmt)
-  c = coix.rv(dist.Categorical(logits=logits), name="c")(key_c)
+  with numpyro.plate("N", logits.shape[-2], dim=-1):
+    c = numpyro.sample("c", dist.Categorical(logits=logits))
 
   out = {**inputs, **{"c": c}}
-  return key_out, out
+  return (out,)
 
 
 # %%
@@ -195,14 +208,14 @@ def gmm_kernel_c(network, key, inputs):
 # run the training loop, and plot the results.
 
 
-def make_gmm(params, num_sweeps):
+def make_gmm(params, num_sweeps, num_particles):
   network = coix.util.BindModule(GMMEncoder(), params)
   # Add particle dimension and construct a program.
-  target = jax.vmap(partial(gmm_target, network))
-  kernels = [
-      jax.vmap(partial(gmm_kernel_mean_tau, network)),
-      jax.vmap(partial(gmm_kernel_c, network)),
-  ]
+  make_particle_plate = lambda: numpyro.plate("particle", num_particles, dim=-3)
+  target = make_particle_plate()(gmm_target)
+  kernel_mean_tau = make_particle_plate()(partial(gmm_kernel_mean_tau, network))
+  kernel_c = make_particle_plate()(partial(gmm_kernel_c, network))
+  kernels = [kernel_mean_tau, kernel_c]
   program = coix.algo.apgs(target, kernels, num_sweeps=num_sweeps)
   return program
 
@@ -211,16 +224,12 @@ def loss_fn(params, key, batch, num_sweeps, num_particles):
   # Prepare data for the program.
   shuffle_rng, rng_key = random.split(key)
   batch = random.permutation(shuffle_rng, batch, axis=1)
-  batch_rng = random.split(rng_key, batch.shape[0])
-  batch = jnp.repeat(batch[:, None], num_particles, axis=1)
-  rng_keys = jax.vmap(partial(random.split, num=num_particles))(batch_rng)
 
   # Run the program and get metrics.
-  program = make_gmm(params, num_sweeps)
-  _, _, metrics = jax.vmap(coix.traced_evaluate(program))(rng_keys, batch)
-  metrics = jax.tree_util.tree_map(
-      partial(jnp.mean, axis=0), metrics
-  )  # mean across batch
+  program = make_gmm(params, num_sweeps, num_particles)
+  _, _, metrics = coix.traced_evaluate(program, seed=rng_key)(batch)
+  for metric_name in ["log_Z", "log_density", "loss"]:
+    metrics[metric_name] = metrics[metric_name] / batch.shape[0]
   return metrics["loss"], metrics
 
 
@@ -231,8 +240,8 @@ def main(args):
   num_sweeps = args.num_sweeps
   num_particles = args.num_particles
 
-  train_ds = load_dataset("train", is_training=True, batch_size=batch_size)
-  test_ds = load_dataset("test", is_training=False, batch_size=batch_size)
+  train_ds = load_dataset("train", batch_size=batch_size)
+  test_ds = load_dataset("test", batch_size=batch_size)
 
   init_params = GMMEncoder().init(jax.random.PRNGKey(0), jnp.zeros((60, 2)))
   gmm_params, _ = coix.util.train(
@@ -243,32 +252,28 @@ def main(args):
       train_ds,
   )
 
-  program = make_gmm(gmm_params, num_sweeps)
+  program = make_gmm(gmm_params, num_sweeps, num_particles)
   batch, label = next(test_ds)
-  batch = jnp.repeat(batch[:, None], num_particles, axis=1)
-  rng_keys = jax.vmap(partial(random.split, num=num_particles))(
-      random.split(jax.random.PRNGKey(1), batch.shape[0])
-  )
-  _, out = jax.vmap(program)(rng_keys, batch)
+  out, _, _ = coix.traced_evaluate(program, seed=jax.random.PRNGKey(1))(batch)
+  out = out[0]
 
-  fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-  for i in range(3):
-    n = i
-    axes[i].scatter(
-        batch[n, 0, :, 0],
-        batch[n, 0, :, 1],
+  _, axes = plt.subplots(2, 3, figsize=(15, 10))
+  for i in range(6):
+    axes[i // 3][i % 3].scatter(
+        batch[i, :, 0],
+        batch[i, :, 1],
         marker=".",
-        color=np.array(["c", "m", "y"])[label[n]],
+        color=np.array(["c", "m", "y"])[label[i]],
     )
     for j, c in enumerate(["r", "g", "b"]):
       ellipse = Ellipse(
-          xy=(out["mean"][n, 0, j, 0], out["mean"][n, 0, j, 1]),
-          width=4 / jnp.sqrt(out["tau"][n, 0, j, 0]),
-          height=4 / jnp.sqrt(out["tau"][n, 0, j, 1]),
+          xy=(out["mean"][0, i, 0, j, 0], out["mean"][0, i, 0, j, 1]),
+          width=4 / jnp.sqrt(out["tau"][0, i, 0, j, 0]),
+          height=4 / jnp.sqrt(out["tau"][0, i, 0, j, 1]),
           fc=c,
           alpha=0.3,
       )
-      axes[i].add_patch(ellipse)
+      axes[i // 3][i % 3].add_patch(ellipse)
   plt.show()
 
 
@@ -286,6 +291,5 @@ if __name__ == "__main__":
 
   tf.config.experimental.set_visible_devices([], "GPU")  # Disable GPU for TF.
   numpyro.set_platform(args.device)
-  coix.set_backend("coix.oryx")
 
   main(args)
