@@ -57,7 +57,7 @@ doc = [
     "sphinx-gallery",
 ]
 oryx = [
-    "oryx@git+https://github.com/jax-ml/oryx.git#b59ab020780cd53d488bc7dcad3696be9fdca0a5",
+    "oryx@git+https://github.com/jax-ml/oryx.git@b59ab020780cd53d488bc7dcad3696be9fdca0a5",
 ]
 
 [tool.pyink]
