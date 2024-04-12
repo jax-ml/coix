@@ -285,7 +285,7 @@ def kernel_what(network, inputs, T=10):
 
 
 # %%
-# Finally, we create the dmm inference program, define the loss function,
+# Finally, we create the bmnist inference program, define the loss function,
 # run the training loop, and plot the results.
 
 

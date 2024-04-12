@@ -117,7 +117,7 @@ def _fold_in_key(key, i):
   return key_new.reshape(key.shape)
 
 
-def propose(p, q, *, loss_fn=None, detach=False):
+def propose(p, q, *, loss_fn=None, detach=False, chain=False):
   """Returns a new program with important weight.
 
   We assume the leftmost batch dimension is the particle dimension. You can add
@@ -132,19 +132,22 @@ def propose(p, q, *, loss_fn=None, detach=False):
     q: a proposal program
     loss_fn: a function that computes loss of this propose combinator
     detach: whether to detach `value` of the returned program
+    chain: if True, we will use output of `q` as input of `p`
 
   Returns:
     q_new: the proposed program
   """
 
   def wrapped(*args, **kwargs):
-    if util.can_extract_key(args):
+    if util.can_extract_key(args) and not chain:
       key_p, key_q = _split_key(args[0])
       p_args = (key_p,) + args[1:]
       q_args = (key_q,) + args[1:]
     else:
       p_args = q_args = args
-    _, q_trace, q_metrics = core.traced_evaluate(q)(*q_args, **kwargs)
+    q_out, q_trace, q_metrics = core.traced_evaluate(q)(*q_args, **kwargs)
+    if chain:
+      p_args = q_out
     metrics = q_metrics.copy()
     q_latents = {
         name: util.get_site_value(site)
