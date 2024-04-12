@@ -223,6 +223,32 @@ def train(
   return params, metrics
 
 
+def _remove_suffix(name):
+  i = 0
+  while name.endswith("_PREV_"):
+    i += len("_PREV_")
+    name = name[: -len("_PREV_")]
+  return name, i
+
+
+def desuffix(trace):
+  """Remove unnecessary suffix terms added to the trace."""
+  names_to_raw_names = {}
+  num_suffix_min = {}
+  for name in trace:
+    raw_name, num_suffix = _remove_suffix(name)
+    names_to_raw_names[name] = raw_name
+    if raw_name in num_suffix_min:
+      num_suffix_min[raw_name] = min(num_suffix_min[raw_name], num_suffix)
+    else:
+      num_suffix_min[raw_name] = num_suffix
+  new_trace = {}
+  for name in trace:
+    raw_name = names_to_raw_names[name]
+    new_trace[name[: len(name) - num_suffix_min[raw_name]]] = trace[name]
+  return new_trace
+
+
 def get_batch_ndims(xs):
   """Gets the number of same-size leading dimensions of the elements in xs."""
   if not xs:

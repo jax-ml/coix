@@ -124,6 +124,9 @@ def propose(p, q, *, loss_fn=None, detach=False, chain=False):
   additional batch dimensions to the whole program by using `vmap`, e.g.
   `vmap(propose(p, q))`.
 
+  Note: We assume superfluous variables, which appear in `q` but not in `p`,
+    implicitly follow Delta distribution in `p`.
+
   Args:
     p: a target program
     q: a proposal program
@@ -176,10 +179,10 @@ def propose(p, q, *, loss_fn=None, detach=False, chain=False):
         for name, lp in p_log_probs.items()
         if util.is_observed_site(p_trace[name]) or (name in q_trace)
     )
+    # Note: We include superfluous variables, whose `name in p_trace`.
     q_log_weight = sum(
         lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
-        for name, lp in q_log_probs.items()
-        if util.is_observed_site(q_trace[name]) or (name in p_trace)
+        for lp in q_log_probs.values()
     )
     incremental_log_weight = p_log_weight - q_log_weight
     log_weight = in_log_weight + incremental_log_weight

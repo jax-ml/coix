@@ -65,9 +65,9 @@ def _use_fori_loop(targets, num_targets, *fns):
 def aft(targets, flows, *, num_targets=None):
   """Annealed Flow Transport.
 
-  1. *Annealed Flow Transport Monte Carlo*,
-     Michael Arbel, Alexander G. D. G. Matthews, Arnaud Doucet
-     https://arxiv.org/abs/2102.07501
+  [1] Annealed Flow Transport Monte Carlo,
+      Michael Arbel, Alexander G. D. G. Matthews, Arnaud Doucet
+      https://arxiv.org/abs/2102.07501
 
   Args:
     targets: a list of target programs
@@ -94,10 +94,10 @@ def aft(targets, flows, *, num_targets=None):
 def apgs(target, kernels, *, num_sweeps=1):
   """Amortized Population Gibbs Sampler.
 
-  1. *Amortized Population Gibbs Samplers with Neural Sufficient Statistics*,
-     Hao Wu, Heiko Zimmermann, Eli Sennesh, Tuan Anh Le, Jan-Willem van de
-     Meent
-     https://arxiv.org/abs/1911.01382
+  [1] Amortized Population Gibbs Samplers with Neural Sufficient Statistics,
+      Hao Wu, Heiko Zimmermann, Eli Sennesh, Tuan Anh Le, Jan-Willem van de
+      Meent
+      https://arxiv.org/abs/1911.01382
 
   Args:
     target: the target program
@@ -123,13 +123,13 @@ def apgs(target, kernels, *, num_sweeps=1):
 def dais(targets, momentum, leapfrog, refreshment, *, num_targets=None):
   """Differentiable Annealed Importance Sampling.
 
-  1. *MCMC Variational Inference via Uncorrected Hamiltonian Annealing*,
-     Tomas Geffner, Justin Domke
-     https://arxiv.org/abs/2107.04150
-  2. *Differentiable Annealed Importance Sampling and the Perils of Gradient
-     Noise*,
-     Guodong Zhang, Kyle Hsu, Jianing Li, Chelsea Finn, Roger Grosse
-     https://arxiv.org/abs/2107.10211
+  [1] MCMC Variational Inference via Uncorrected Hamiltonian Annealing,
+      Tomas Geffner, Justin Domke
+      https://arxiv.org/abs/2107.04150
+  [2] Differentiable Annealed Importance Sampling and the Perils of Gradient
+      Noise,
+      Guodong Zhang, Kyle Hsu, Jianing Li, Chelsea Finn, Roger Grosse
+      https://arxiv.org/abs/2107.10211
 
   Args:
     targets: a list of target programs
@@ -166,9 +166,9 @@ def dais(targets, momentum, leapfrog, refreshment, *, num_targets=None):
 def nasmc(targets, proposals, *, num_targets=None):
   """Neural Adaptive Sequential Monte Carlo.
 
-  1. *Neural Adaptive Sequential Monte Carlo*,
-     Shixiang Gu, Zoubin Ghahramani, Richard E. Turner
-     https://arxiv.org/abs/1506.03338
+  [1] Neural Adaptive Sequential Monte Carlo,
+      Shixiang Gu, Zoubin Ghahramani, Richard E. Turner
+      https://arxiv.org/abs/1506.03338
 
   Args:
     targets: a list of target programs
@@ -196,10 +196,10 @@ def nasmc(targets, proposals, *, num_targets=None):
 def nvi_avo(targets, forwards, reverses, *, num_targets=None):
   """AIS with Annealed Variational Objective.
 
-  1. *Improving Explorability in Variational Inference with Annealed Variational
-     Objectives*,
-     Chin-Wei Huang, Shawn Tan, Alexandre Lacoste, Aaron Courville
-     https://arxiv.org/abs/1809.01818
+  [1] Improving Explorability in Variational Inference with Annealed Variational
+      Objectives,
+      Chin-Wei Huang, Shawn Tan, Alexandre Lacoste, Aaron Courville
+      https://arxiv.org/abs/1809.01818
 
   Args:
     targets: a list of target programs
@@ -231,9 +231,9 @@ def nvi_fkl(targets, proposals, *, num_targets=None):
   This is different from `nasmc`, where we assume that the targets are filtering
   distributions. We also assume that the final target does not have parameters.
 
-  1. *Nested Variational Inference*,
-     Heiko Zimmermann, Hao Wu, Babak Esmaeili, Jan-Willem van de Meent
-     https://arxiv.org/abs/2106.11302
+  [1] Nested Variational Inference,
+      Heiko Zimmermann, Hao Wu, Babak Esmaeili, Jan-Willem van de Meent
+      https://arxiv.org/abs/2106.11302
 
   Args:
     targets: a list of target programs
@@ -270,9 +270,9 @@ def nvi_rkl(targets, forwards, reverses, *, num_targets=None):
   initial target to the final target. Here we use ELBO loss in the last step
   to also maximize likelihood in case there are parameters in the final target.
 
-  1. *Nested Variational Inference*,
-     Heiko Zimmermann, Hao Wu, Babak Esmaeili, Jan-Willem van de Meent
-     https://arxiv.org/abs/2106.11302
+  [1] Nested Variational Inference,
+      Heiko Zimmermann, Hao Wu, Babak Esmaeili, Jan-Willem van de Meent
+      https://arxiv.org/abs/2106.11302
 
   Args:
     targets: a list of target programs
@@ -302,12 +302,12 @@ def nvi_rkl(targets, forwards, reverses, *, num_targets=None):
 def rws(target, proposal):
   """Reweighted Wake-Sleep.
 
-  1. *Reweighted Wake-Sleep*,
-     Jörg Bornschein, Yoshua Bengio
-     https://arxiv.org/abs/1406.2751
-  2. *Revisiting Reweighted Wake-Sleep for Models with Stochastic Control Flow*,
-     Tuan Anh Le, Adam R. Kosiorek, N. Siddharth, Yee Whye Teh, Frank Wood
-     https://arxiv.org/abs/1805.10469
+  [1] Reweighted Wake-Sleep,
+      Jörg Bornschein, Yoshua Bengio
+      https://arxiv.org/abs/1406.2751
+  [2] Revisiting Reweighted Wake-Sleep for Models with Stochastic Control Flow,
+      Tuan Anh Le, Adam R. Kosiorek, N. Siddharth, Yee Whye Teh, Frank Wood
+      https://arxiv.org/abs/1805.10469
 
   Args:
     target: the target program
@@ -322,13 +322,13 @@ def rws(target, proposal):
 def svi(target, proposal):
   """Stochastic Variational Inference.
 
-  1. *Auto-Encoding Variational Bayes*,
-     Diederik P Kingma, Max Welling
-     https://arxiv.org/abs/1312.6114
-  2. *Stochastic Backpropagation and Approximate Inference in Deep Generative
-     Models*,
-     Danilo Jimenez Rezende, Shakir Mohamed, Daan Wierstra
-     https://arxiv.org/abs/1401.4082
+  [1] Auto-Encoding Variational Bayes,
+      Diederik P Kingma, Max Welling
+      https://arxiv.org/abs/1312.6114
+  [2] Stochastic Backpropagation and Approximate Inference in Deep Generative
+      Models,
+      Danilo Jimenez Rezende, Shakir Mohamed, Daan Wierstra
+      https://arxiv.org/abs/1401.4082
 
   Args:
     target: the target program
@@ -343,9 +343,9 @@ def svi(target, proposal):
 def svi_iwae(target, proposal):
   """SVI with Important Weighted Autoencoder objective.
 
-  1. *Importance Weighted Autoencoders*,
-     Yuri Burda, Roger Grosse, Ruslan Salakhutdinov
-     https://arxiv.org/abs/1509.00519
+  [1] Importance Weighted Autoencoders,
+      Yuri Burda, Roger Grosse, Ruslan Salakhutdinov
+      https://arxiv.org/abs/1509.00519
 
   Args:
     target: the target program
@@ -360,10 +360,10 @@ def svi_iwae(target, proposal):
 def svi_stl(target, proposal):
   """SVI with Sticking-the-Landing objective.
 
-  1. *Sticking the Landing: Simple, Lower-Variance Gradient Estimators for
-     Variational Inference*,
-     Geoffrey Roeder, Yuhuai Wu, David Duvenaud
-     https://arxiv.org/abs/1703.09194
+  [1] Sticking the Landing: Simple, Lower-Variance Gradient Estimators for
+      Variational Inference,
+      Geoffrey Roeder, Yuhuai Wu, David Duvenaud
+      https://arxiv.org/abs/1703.09194
 
   Args:
     target: the target program
@@ -382,20 +382,20 @@ def vsmc(targets, proposals, *, num_targets=None):
   masking) during SMC steps. The targets can be filtering distributions or
   smoothing distributions (as in [4]).
 
-  1. *Filtering Variational Objectives*,
-     Chris J. Maddison, Dieterich Lawson, George Tucker, Nicolas Heess,
-     Mohammad Norouzi, Andriy Mnih, Arnaud Doucet, Yee Whye Teh
-     https://arxiv.org/abs/1705.09279
-  2. *Auto-Encoding Sequential Monte Carlo*,
-     Tuan Anh Le, Maximilian Igl, Tom Rainforth, Tom Jin, Frank Wood
-     https://arxiv.org/abs/1705.10306
-  3. *Variational Sequential Monte Carlo*,
-     Christian A. Naesseth, Scott W. Linderman, Rajesh Ranganath, David M. Blei
-     https://arxiv.org/abs/1705.11140
-  4. *Twisted Variational Sequential Monte Carlo*,
-     Dieterich Lawson, George Tucker, Christian A Naesseth, Chris J Maddison,
-     Ryan P Adams, Yee Whye Teh
-     http://bayesiandeeplearning.org/2018/papers/111.pdf
+  [1] Filtering Variational Objectives,
+      Chris J. Maddison, Dieterich Lawson, George Tucker, Nicolas Heess,
+      Mohammad Norouzi, Andriy Mnih, Arnaud Doucet, Yee Whye Teh
+      https://arxiv.org/abs/1705.09279
+  [2] Auto-Encoding Sequential Monte Carlo,
+      Tuan Anh Le, Maximilian Igl, Tom Rainforth, Tom Jin, Frank Wood
+      https://arxiv.org/abs/1705.10306
+  [3] Variational Sequential Monte Carlo,
+      Christian A. Naesseth, Scott W. Linderman, Rajesh Ranganath, David M. Blei
+      https://arxiv.org/abs/1705.11140
+  [4] Twisted Variational Sequential Monte Carlo,
+      Dieterich Lawson, George Tucker, Christian A Naesseth, Chris J Maddison,
+      Ryan P Adams, Yee Whye Teh
+      http://bayesiandeeplearning.org/2018/papers/111.pdf
 
   Args:
     targets: a list of target programs
@@ -408,11 +408,9 @@ def vsmc(targets, proposals, *, num_targets=None):
   if _use_fori_loop(targets, num_targets, proposals):
 
     def body_fun(i, q):
-      return propose(targets(i), compose(proposals(i), resample(q)))
+      return compose(proposals(i + 1), resample(propose(targets(i), q)))
 
-    q = propose(targets(0), proposals(0))
-    q = fori_loop(1, num_targets - 1, body_fun, q)
-    q = compose(proposals(num_targets - 1), resample(q))
+    q = fori_loop(0, num_targets - 1, body_fun, proposals(0))
     return propose(targets(num_targets - 1), q, loss_fn=iwae_loss)
 
   q = propose(targets[0], proposals[0])
