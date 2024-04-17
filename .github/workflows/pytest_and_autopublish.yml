@@ -18,7 +18,7 @@ jobs:
 
     - run: sudo apt install -y pandoc gsfonts
     - run: pip --version
-    - run: pip install -e .[dev,doc,oryx]
+    - run: pip install -e .[dev,doc]
     - run: pip freeze
 
     - name: Run lint
@@ -46,7 +46,9 @@ jobs:
         # cache: pip
         # cache-dependency-path: '**/pyproject.toml'
 
-    - run: pip install -e .[dev,oryx]
+    - run:
+        pip install -e .[dev]
+        pip install "git+https://github.com/jax-ml/oryx.git@b59ab020780cd53d488bc7dcad3696be9fdca0a5"
 
     # Run tests (in parallel)
     - name: Run core tests
