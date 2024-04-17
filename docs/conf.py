@@ -59,6 +59,7 @@ release = version
 # ones.
 extensions = [
     "nbsphinx",
+    "sphinxcontrib.jquery",
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
     "sphinx.ext.imgconverter",
