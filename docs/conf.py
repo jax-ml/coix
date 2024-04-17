@@ -198,6 +198,11 @@ sphinx_gallery_conf = {
 }
 
 
+# -- Resolve sphinx 7.3.5 warnings
+
+suppress_warnings = ["config.cache"]
+
+
 # -- Add thumbnails images
 
 nbsphinx_thumbnails = {}

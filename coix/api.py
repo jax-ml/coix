@@ -125,7 +125,7 @@ def propose(p, q, *, loss_fn=None, detach=False, chain=False):
   `vmap(propose(p, q))`.
 
   Note: We assume superfluous variables, which appear in `q` but not in `p`,
-    implicitly follow Delta distribution in `p`.
+  implicitly follow Delta distribution in `p`.
 
   Args:
     p: a target program
