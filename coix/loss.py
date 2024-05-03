@@ -115,29 +115,17 @@ def elbo_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   return loss
 
 
-def _proposal_and_target_sites(q_trace, p_trace):
-  """Gets current proposal sites and current target sites."""
-  proposal_sites = []
-  target_sites = []
-  for name in p_trace:
-    if not name.endswith("_PREV_"):
-      target_sites.append(name)
-      if name in q_trace:
-        while name + "_PREV_" in q_trace:
-          name += "_PREV_"
-        proposal_sites.append(name)
-  if not any(name.endswith("_PREV_") for name in proposal_sites):
-    proposal_sites = []
-  return proposal_sites, target_sites
-
-
 def fkl_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
-  """Forward KL objective."""
+  """Forward KL objective. Here we do not optimize p."""
   batch_ndims = incoming_log_weight.ndim
   q_log_probs = {
       name: util.get_site_log_prob(site) for name, site in q_trace.items()
   }
-  proposal_sites, _ = _proposal_and_target_sites(q_trace, p_trace)
+  proposal_sites = [
+      name
+      for name, site in q_trace.items()
+      if util.is_observed_site(site) or name.endswith("_PREV_")
+  ]
 
   proposal_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
@@ -180,7 +168,11 @@ def rkl_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   q_log_probs = {
       name: util.get_site_log_prob(site) for name, site in q_trace.items()
   }
-  proposal_sites, target_sites = _proposal_and_target_sites(q_trace, p_trace)
+  proposal_sites = [
+      name
+      for name, site in q_trace.items()
+      if util.is_observed_site(site) or name.endswith("_PREV_")
+  ]
 
   proposal_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
@@ -190,7 +182,7 @@ def rkl_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   target_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
       for name, lp in p_log_probs.items()
-      if name in target_sites
+      if not name.endswith("_PREV_")
   )
 
   w1 = jax.lax.stop_gradient(jax.nn.softmax(incoming_log_weight, axis=0))
@@ -213,7 +205,11 @@ def rws_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   q_log_probs = {
       name: util.get_site_log_prob(site) for name, site in q_trace.items()
   }
-  proposal_sites, target_sites = _proposal_and_target_sites(q_trace, p_trace)
+  proposal_sites = [
+      name
+      for name, site in q_trace.items()
+      if util.is_observed_site(site) or name.endswith("_PREV_")
+  ]
 
   proposal_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
@@ -228,7 +224,7 @@ def rws_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   target_lp = sum(
       lp.reshape(lp.shape[:batch_ndims] + (-1,)).sum(-1)
       for name, lp in p_log_probs.items()
-      if name in target_sites
+      if not name.endswith("_PREV_")
   )
 
   surrogate_loss = (target_lp - proposal_lp) + forward_lp

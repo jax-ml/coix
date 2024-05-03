@@ -121,6 +121,8 @@ class AnnealNetwork(nn.Module):
 def anneal_target(network, k=0):
   x = numpyro.sample("x", dist.Normal(0, 5).expand([2]).mask(False).to_event())
   anneal_density = network.anneal_density(x, index=k)
+  # We make "anneal_density" a latent site so that it does not contribute
+  # to the likelihood weighting of the first proposal.
   numpyro.sample("anneal_density", dist.Unit(anneal_density))
   return ({"x": x},)
 
