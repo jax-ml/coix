@@ -117,6 +117,7 @@ def elbo_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
 
 def fkl_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   """Forward KL objective. Here we do not optimize p."""
+  del p_trace
   batch_ndims = incoming_log_weight.ndim
   q_log_probs = {
       name: util.get_site_log_prob(site) for name, site in q_trace.items()
