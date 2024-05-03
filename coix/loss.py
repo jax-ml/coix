@@ -124,7 +124,7 @@ def fkl_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   proposal_sites = [
       name
       for name, site in q_trace.items()
-      if util.is_observed_site(site) or name.endswith("_PREV_")
+      if isinstance(site, dict) and "desuffix" in site
   ]
 
   proposal_lp = sum(
@@ -171,7 +171,7 @@ def rkl_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   proposal_sites = [
       name
       for name, site in q_trace.items()
-      if util.is_observed_site(site) or name.endswith("_PREV_")
+      if isinstance(site, dict) and "desuffix" in site
   ]
 
   proposal_lp = sum(
@@ -208,7 +208,7 @@ def rws_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   proposal_sites = [
       name
       for name, site in q_trace.items()
-      if util.is_observed_site(site) or name.endswith("_PREV_")
+      if isinstance(site, dict) and "desuffix" in site
   ]
 
   proposal_lp = sum(
