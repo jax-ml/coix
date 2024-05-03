@@ -118,7 +118,7 @@ def desuffix(trace):
   for name in trace:
     raw_name = names_to_raw_names[name]
     if raw_name != name and isinstance(trace[name], dict):
-      trace[name]["desuffix"] = True
+      trace[name]["suffix"] = True
     new_trace[name[: len(name) - num_suffix_min[raw_name]]] = trace[name]
   return new_trace
 

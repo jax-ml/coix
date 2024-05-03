@@ -408,9 +408,11 @@ def vsmc(targets, proposals, *, num_targets=None):
   if _use_fori_loop(targets, num_targets, proposals):
 
     def body_fun(i, q):
-      return compose(proposals(i + 1), resample(propose(targets(i), q)))
+      return propose(targets(i), compose(proposals(i), resample(q)))
 
-    q = fori_loop(0, num_targets - 1, body_fun, proposals(0))
+    q = propose(targets(0), proposals(0))
+    q = fori_loop(1, num_targets - 1, body_fun, q)
+    q = compose(proposals(num_targets - 1), resample(q))
     return propose(targets(num_targets - 1), q, loss_fn=iwae_loss)
 
   q = propose(targets[0], proposals[0])
