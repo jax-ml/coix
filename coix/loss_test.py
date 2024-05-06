@@ -25,7 +25,7 @@ p_trace = {
 }
 q_trace = {
     "x": {"log_prob": np.ones((3, 2))},
-    "y": {"log_prob": np.array([1.0, 1.0, 0.0])},
+    "y": {"log_prob": np.array([1.0, 1.0, 0.0]), "suffix": True},
     "x_PREV_": {"log_prob": np.full((3, 2), 3.0)},
 }
 incoming_weight = np.zeros(3)
