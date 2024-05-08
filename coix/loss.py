@@ -29,7 +29,13 @@ __all__ = [
 ]
 
 
-def apg_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight, aggregate=False):
+def apg_loss(
+    q_trace,
+    p_trace,
+    incoming_log_weight,
+    incremental_log_weight,
+    aggregate=False,
+):
   """RWS objective that exploits conditional dependency."""
   del incoming_log_weight, incremental_log_weight
   p_log_probs = {
