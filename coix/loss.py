@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 
-def apg_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
+def apg_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight, aggregate=False):
   """RWS objective that exploits conditional dependency."""
   del incoming_log_weight, incremental_log_weight
   p_log_probs = {
@@ -87,11 +87,19 @@ def apg_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   surrogate_loss = target_lp + forward_lp
   log_weight = target_lp + reverse_lp - (forward_lp + proposal_lp)
   w = jax.lax.stop_gradient(jax.nn.softmax(log_weight, axis=0))
-  loss = -(w * surrogate_loss).sum()
+  loss = -(w * surrogate_loss)
+  if aggregate:
+    loss = loss.sum()
   return loss
 
 
-def avo_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
+def avo_loss(
+    q_trace,
+    p_trace,
+    incoming_log_weight,
+    incremental_log_weight,
+    aggregate=False,
+):
   """Annealed Variational Objective."""
   del q_trace, p_trace
   surrogate_loss = incremental_log_weight
@@ -99,11 +107,19 @@ def avo_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
     w1 = 1.0 / incoming_log_weight.shape[0]
   else:
     w1 = 1.0
-  loss = -(w1 * surrogate_loss).sum()
+  loss = -(w1 * surrogate_loss)
+  if aggregate:
+    loss = loss.sum()
   return loss
 
 
-def elbo_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
+def elbo_loss(
+    q_trace,
+    p_trace,
+    incoming_log_weight,
+    incremental_log_weight,
+    aggregate=False,
+):
   """Evidence Lower Bound objective."""
   del q_trace, p_trace
   surrogate_loss = incremental_log_weight
@@ -111,11 +127,19 @@ def elbo_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
     w1 = jax.lax.stop_gradient(jax.nn.softmax(incoming_log_weight, axis=0))
   else:
     w1 = 1.0
-  loss = -(w1 * surrogate_loss).sum()
+  loss = -(w1 * surrogate_loss)
+  if aggregate:
+    loss = loss.sum()
   return loss
 
 
-def fkl_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
+def fkl_loss(
+    q_trace,
+    p_trace,
+    incoming_log_weight,
+    incremental_log_weight,
+    aggregate=False,
+):
   """Forward KL objective. Here we do not optimize p."""
   del p_trace
   batch_ndims = incoming_log_weight.ndim
@@ -144,11 +168,19 @@ def fkl_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   w1 = jax.lax.stop_gradient(jax.nn.softmax(incoming_log_weight, axis=0))
   log_weight = incoming_log_weight + incremental_log_weight
   w = jax.lax.stop_gradient(jax.nn.softmax(log_weight, axis=0))
-  loss = -(w * surrogate_loss - w1 * proposal_lp).sum()
+  loss = -(w * surrogate_loss - w1 * proposal_lp)
+  if aggregate:
+    loss = loss.sum()
   return loss
 
 
-def iwae_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
+def iwae_loss(
+    q_trace,
+    p_trace,
+    incoming_log_weight,
+    incremental_log_weight,
+    aggregate=False,
+):
   """Importance Weighted Autoencoder objective."""
   del q_trace, p_trace
   log_weight = incoming_log_weight + incremental_log_weight
@@ -157,11 +189,19 @@ def iwae_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
     w = jax.lax.stop_gradient(jax.nn.softmax(log_weight, axis=0))
   else:
     w = 1.0
-  loss = -(w * surrogate_loss).sum()
+  loss = -(w * surrogate_loss)
+  if aggregate:
+    loss = loss.sum()
   return loss
 
 
-def rkl_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
+def rkl_loss(
+    q_trace,
+    p_trace,
+    incoming_log_weight,
+    incremental_log_weight,
+    aggregate=False,
+):
   """Reverse KL objective."""
   batch_ndims = incoming_log_weight.ndim
   p_log_probs = {
@@ -195,11 +235,19 @@ def rkl_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   )
   log_weight = incoming_log_weight + incremental_log_weight
   w = jax.lax.stop_gradient(jax.nn.softmax(log_weight, axis=0))
-  loss = -(w1 * surrogate_loss - w * target_lp).sum()
+  loss = -(w1 * surrogate_loss - w * target_lp)
+  if aggregate:
+    loss = loss.sum()
   return loss
 
 
-def rws_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
+def rws_loss(
+    q_trace,
+    p_trace,
+    incoming_log_weight,
+    incremental_log_weight,
+    aggregate=False,
+):
   """Reweighted Wake-Sleep objective."""
   batch_ndims = incoming_log_weight.ndim
   p_log_probs = {
@@ -234,5 +282,7 @@ def rws_loss(q_trace, p_trace, incoming_log_weight, incremental_log_weight):
   surrogate_loss = (target_lp - proposal_lp) + forward_lp
   log_weight = incoming_log_weight + incremental_log_weight
   w = jax.lax.stop_gradient(jax.nn.softmax(log_weight, axis=0))
-  loss = -(w * surrogate_loss).sum()
+  loss = -(w * surrogate_loss)
+  if aggregate:
+    loss = loss.sum()
   return loss
