@@ -81,9 +81,7 @@ def test_empirical_program():
 
   _, trace, _ = coix.traced_evaluate(model)(1.0)
   samples = {name: site["value"] for name, site in trace.items()}
-  jax.tree_util.tree_map(
-      np.testing.assert_allclose, samples, {"x": 1.0, "y": 2.0}
-  )
+  jax.tree.map(np.testing.assert_allclose, samples, {"x": 1.0, "y": 2.0})
   assert "is_observed" not in trace["x"]
   assert trace["y"]["is_observed"]
 
@@ -145,7 +143,7 @@ def test_substitute():
   expected = {"x": 9.0}
   _, trace, _ = coix.traced_evaluate(model, expected)(random.PRNGKey(0))
   actual = {"x": trace["x"]["value"]}
-  jax.tree_util.tree_map(np.testing.assert_allclose, actual, expected)
+  jax.tree.map(np.testing.assert_allclose, actual, expected)
 
 
 def test_suffix():
@@ -155,7 +153,7 @@ def test_suffix():
   f = coix.oryx.call_and_reap_tags(
       coix.core.suffix(model), coix.oryx.RANDOM_VARIABLE
   )
-  jax.tree_util.tree_map(
+  jax.tree.map(
       np.testing.assert_allclose,
       f(1.0)[1][coix.oryx.RANDOM_VARIABLE],
       {"x_PREV_": 1.0},

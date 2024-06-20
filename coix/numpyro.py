@@ -126,13 +126,13 @@ class StopGradient(dist.Distribution):
     return d.log_prob(value)
 
   def tree_flatten(self):
-    params, treedef = jax.tree_util.tree_flatten(self.base_dist)
+    params, treedef = jax.tree.flatten(self.base_dist)
     return params, (treedef, self.detach_sample, self.detach_args)
 
   @classmethod
   def tree_unflatten(cls, aux_data, params):
     treedef, detach_sample, detach_args = aux_data
-    base_dist = jax.tree_util.tree_unflatten(treedef, params)
+    base_dist = jax.tree.unflatten(treedef, params)
     return cls(base_dist, detach_sample=detach_sample, detach_args=detach_args)
 
 

@@ -94,9 +94,9 @@ class AnnealKernelList(nn.Module):
       out = vmap_net(name="kernel")(
           jnp.broadcast_to(x, (self.M - 1,) + x.shape)
       )
-      return jax.tree_util.tree_map(lambda x: x[index], out)
+      return jax.tree.map(lambda x: x[index], out)
     params = self.scope.get_variable("params", "kernel")
-    params_i = jax.tree_util.tree_map(lambda x: x[index], params)
+    params_i = jax.tree.map(lambda x: x[index], params)
     return AnnealKernel(name="kernel").apply(
         flax.core.freeze({"params": params_i}), x
     )
@@ -188,9 +188,7 @@ def main(args):
   )(rng_keys)
 
   metrics.pop("log_weight")
-  anneal_metrics = jax.tree_util.tree_map(
-      lambda x: round(float(jnp.mean(x)), 4), metrics
-  )
+  anneal_metrics = jax.tree.map(lambda x: round(float(jnp.mean(x)), 4), metrics)
   print(anneal_metrics)
 
   plt.figure(figsize=(8, 8))

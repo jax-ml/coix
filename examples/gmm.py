@@ -180,7 +180,7 @@ def gmm_kernel_mean_tau(network, inputs):
     alpha, beta, mu, nu = network.encode_mean_tau(xc)
   else:
     alpha, beta, mu, nu = network.encode_initial_mean_tau(inputs["x"])
-  alpha, beta, mu, nu = jax.tree_util.tree_map(
+  alpha, beta, mu, nu = jax.tree.map(
       lambda x: jnp.expand_dims(x, -3), (alpha, beta, mu, nu)
   )
   tau = numpyro.sample("tau", dist.Gamma(alpha, beta).to_event(2))

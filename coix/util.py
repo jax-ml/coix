@@ -138,7 +138,25 @@ class BindModule:
 
 def _skip_update(grad, opt_state, params):
   del params
-  return jax.tree_util.tree_map(jnp.zeros_like, grad), opt_state
+  return jax.tree.map(jnp.zeros_like, grad), opt_state
+
+
+@functools.partial(jax.jit, donate_argnums=(0, 1, 2), static_argnums=(3,))
+def _optimizer_update(params, opt_state, grads, optimizer):
+  """Updates the parameters and the optimizer state."""
+  # Helpful metric to print out during training.
+  squared_grad_norm = sum(jnp.square(p).sum() for p in jax.tree.leaves(grads))
+  grads = jax.tree.map(lambda x, y: x.astype(y.dtype), grads, params)
+  updates, opt_state = jax.lax.cond(
+      jnp.isfinite(squared_grad_norm),
+      optimizer.update,
+      _skip_update,
+      grads,
+      opt_state,
+      params,
+  )
+  params = jax.tree.map(lambda p, u: p + u, params, updates)
+  return params, opt_state, squared_grad_norm
 
 
 def train(
@@ -161,23 +179,10 @@ def train(
     (_, metrics), grads = jax.value_and_grad(loss_fn, has_aux=True)(
         params, *args, **kwargs
     )
-    grads = jax.tree_util.tree_map(
-        lambda x, y: x.astype(y.dtype), grads, params
-    )
-    # Helpful metric to print out during training.
-    squared_grad_norm = sum(
-        jnp.square(p).sum() for p in jax.tree_util.tree_leaves(grads)
+    params, opt_state, squared_grad_norm = _optimizer_update(
+        params, opt_state, grads, optimizer
     )
     metrics["squared_grad_norm"] = squared_grad_norm
-    updates, opt_state = jax.lax.cond(
-        jnp.isfinite(jax.flatten_util.ravel_pytree(grads)[0]).all(),
-        optimizer.update,
-        _skip_update,
-        grads,
-        opt_state,
-        params,
-    )
-    params = jax.tree_util.tree_map(lambda p, u: p + u, params, updates)
     return params, opt_state, metrics
 
   if callable(jit_compile):
