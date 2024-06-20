@@ -233,7 +233,7 @@ def loss_fn(params, key, batch, num_sweeps, num_particles):
   # Run the program and get metrics.
   program = make_gmm(params, num_sweeps)
   _, _, metrics = jax.vmap(coix.traced_evaluate(program))(rng_keys, batch)
-  metrics = jax.tree_util.tree_map(
+  metrics = jax.tree.map(
       partial(jnp.mean, axis=0), metrics
   )  # mean across batch
   return metrics["loss"], metrics

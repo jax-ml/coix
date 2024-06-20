@@ -328,10 +328,10 @@ def resample(q, num_samples=None):
     maybe_get_along_first_axis = functools.partial(
         _maybe_get_along_first_axis, idx=idx, n=n, squeeze=not k
     )
-    out = jax.tree_util.tree_map(
+    out = jax.tree.map(
         maybe_get_along_first_axis, out, is_leaf=lambda x: isinstance(x, list)
     )
-    resample_trace = jax.tree_util.tree_map(
+    resample_trace = jax.tree.map(
         maybe_get_along_first_axis, trace, is_leaf=lambda x: isinstance(x, list)
     )
     return core.empirical(out, resample_trace, metrics)(*args, **kwargs)
@@ -504,15 +504,15 @@ def memoize(p, q, memory=None, memory_size=None):
         _maybe_get_along_first_axis, idx=idxs, n=num_particles
     )
     metrics["log_weight"] = maybe_get_along_first_axis(p_log_weight)
-    out = jax.tree_util.tree_map(
+    out = jax.tree.map(
         maybe_get_along_first_axis, out, is_leaf=lambda x: isinstance(x, list)
     )
-    marginal_trace = jax.tree_util.tree_map(
+    marginal_trace = jax.tree.map(
         maybe_get_along_first_axis,
         marginal_trace,
         is_leaf=lambda x: isinstance(x, list),
     )
-    metrics["memory"] = jax.tree_util.tree_map(
+    metrics["memory"] = jax.tree.map(
         maybe_get_along_first_axis,
         new_memory,
         is_leaf=lambda x: isinstance(x, list),

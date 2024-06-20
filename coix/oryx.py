@@ -218,7 +218,7 @@ def substitute_rule(state, *args, **kwargs):
   name = kwargs.get("name")
   if name in state:
     flat_args = _split_list(args, kwargs["num_consts"])
-    _, dist = jax.tree_util.tree_unflatten(kwargs["in_tree"], flat_args)
+    _, dist = jax.tree.unflatten(kwargs["in_tree"], flat_args)
     value = state[name]
     value = primitive.tie_in(flat_args, value)
     jaxpr, _ = trace_util.stage(identity, dynamic=True)(value, dist)
@@ -247,10 +247,10 @@ def distribution_rule(state, *args, **kwargs):
   name = kwargs.get("name")
   if name is not None:
     flat_args = _split_list(args, kwargs["num_consts"])
-    _, dist = jax.tree_util.tree_unflatten(kwargs["in_tree"], flat_args)
-    dist_flat, dist_tree = jax.tree_util.tree_flatten(dist)
+    _, dist = jax.tree.unflatten(kwargs["in_tree"], flat_args)
+    dist_flat, dist_tree = jax.tree.flatten(dist)
     state[name] = {dist_tree: dist_flat}
-  args = jax.tree_util.tree_map(jax.core.raise_as_much_as_possible, args)
+  args = jax.tree.map(jax.core.raise_as_much_as_possible, args)
   return random_variable_p.bind(*args, **kwargs), state
 
 
@@ -341,20 +341,20 @@ class STLDistribution:
     return jax.lax.stop_gradient(self.base_dist).log_prob(value)
 
   def tree_flatten(self):
-    params, treedef = jax.tree_util.tree_flatten(self.base_dist)
+    params, treedef = jax.tree.flatten(self.base_dist)
     return (params, treedef)
 
   @classmethod
   def tree_unflatten(cls, aux_data, children):
-    base_dist = jax.tree_util.tree_unflatten(aux_data, children)
+    base_dist = jax.tree.unflatten(aux_data, children)
     return cls(base_dist)
 
 
 def stl_rule(state, *args, **kwargs):
   flat_args = _split_list(args, kwargs["num_consts"])
-  key, dist = jax.tree_util.tree_unflatten(kwargs["in_tree"], flat_args)
+  key, dist = jax.tree.unflatten(kwargs["in_tree"], flat_args)
   stl_dist = STLDistribution(dist)
-  _, in_tree = jax.tree_util.tree_flatten((key, stl_dist))
+  _, in_tree = jax.tree.flatten((key, stl_dist))
   kwargs["in_tree"] = in_tree
   out = random_variable_p.bind(*args, **kwargs)
   return out, state
@@ -411,7 +411,7 @@ def traced_evaluate(p, latents=None):
     trace = {}
     for name, value in tags[RANDOM_VARIABLE].items():
       dist_tree, dist_flat = list(tags[DISTRIBUTION][name].items())[0]
-      dist = jax.tree_util.tree_unflatten(dist_tree, dist_flat)
+      dist = jax.tree.unflatten(dist_tree, dist_flat)
       trace[name] = {"value": value, "log_prob": dist.log_prob(value)}
       if name in tags[OBSERVED]:
         trace[name]["is_observed"] = True
