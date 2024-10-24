@@ -113,7 +113,7 @@ def test_log_prob_detach():
 
 def test_observed():
   def model(a):
-    return coryx.rv(dist.Delta(2.0, 3.0), obs=1.0, name="x") + a
+    return coryx.rv(dist.Delta(a, 3.0), obs=1.0, name="x") + a
 
   _, trace, _ = coix.traced_evaluate(model)(2.0)
   assert "x" in trace
