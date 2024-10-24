@@ -48,7 +48,7 @@ jobs:
 
     - run:
         pip install -e .[dev]
-        pip install "git+https://github.com/jax-ml/oryx.git@b59ab020780cd53d488bc7dcad3696be9fdca0a5"
+        pip install "git+https://github.com/jax-ml/oryx.git"
 
     # Run tests (in parallel)
     - name: Run core tests
