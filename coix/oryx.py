@@ -250,7 +250,6 @@ def distribution_rule(state, *args, **kwargs):
     _, dist = jax.tree.unflatten(kwargs["in_tree"], flat_args)
     dist_flat, dist_tree = jax.tree.flatten(dist)
     state[name] = {dist_tree: dist_flat}
-  args = jax.tree.map(jax.core.raise_as_much_as_possible, args)
   return random_variable_p.bind(*args, **kwargs), state
 
 
