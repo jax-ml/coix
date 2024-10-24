@@ -14,7 +14,7 @@ jobs:
     # Install deps
     - uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.11'
 
     - run: sudo apt install -y pandoc gsfonts
     - run: pip --version
@@ -41,7 +41,7 @@ jobs:
     # Install deps
     - uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.11'
         # Uncomment to cache of pip dependencies (if tests too slow)
         # cache: pip
         # cache-dependency-path: '**/pyproject.toml'
