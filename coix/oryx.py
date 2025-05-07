@@ -17,6 +17,7 @@
 import functools
 import inspect
 import itertools
+from typing import Any, Callable, Iterable, TypeVar
 
 from coix.util import get_batch_ndims
 from coix.util import get_log_weight
@@ -51,6 +52,13 @@ RANDOM_VARIABLE = ppl.RANDOM_VARIABLE
 
 ALL_TAGS = (RANDOM_VARIABLE, OBSERVED, DISTRIBUTION, METRIC)
 
+T = TypeVar('T')
+
+def safe_map(f: Callable[..., T], *args: Iterable[Any]) -> list[T]:
+  """Like map(), but checks argument lengths and returns a list."""
+  return [f(*a) for a in zip(*args, strict=True)]
+
+
 ########################################
 # Override Oryx behaviors
 ########################################
@@ -64,7 +72,7 @@ def _process_custom_jvp_call(
   del self
   vals_in = [t.val for t in tracers]
   out_flat = prim.bind(fun, jvp, *vals_in, symbolic_zeros=symbolic_zeros)
-  out_tracer = jax.util.safe_map(trace.pure, out_flat)
+  out_tracer = safe_map(trace.pure, out_flat)
   return out_tracer
 
 
@@ -75,11 +83,11 @@ def _eval_jaxpr_with_state(jaxpr, rules, consts, state, *args):
   """Patch effect_handler.eval_jaxpr_with_state."""
   env = effect_handler.Environment()
 
-  jax.util.safe_map(env.write, jaxpr.constvars, consts)
-  jax.util.safe_map(env.write, jaxpr.invars, args)
+  safe_map(env.write, jaxpr.constvars, consts)
+  safe_map(env.write, jaxpr.invars, args)
 
   for eqn in jaxpr.eqns:
-    invals = jax.util.safe_map(env.read, eqn.invars)
+    invals = safe_map(env.read, eqn.invars)
     call_jaxpr, params = trace_util.extract_call_jaxpr(
         eqn.primitive, eqn.params
     )
@@ -99,10 +107,10 @@ def _eval_jaxpr_with_state(jaxpr, rules, consts, state, *args):
     else:
       ans = eqn.primitive.bind(*invals, **params)
     if eqn.primitive.multiple_results:
-      jax.util.safe_map(env.write, eqn.outvars, ans)
+      safe_map(env.write, eqn.outvars, ans)
     else:
       env.write(eqn.outvars[0], ans)
-  return jax.util.safe_map(env.read, jaxpr.outvars), state
+  return safe_map(env.read, jaxpr.outvars), state
 
 
 effect_handler.eval_jaxpr_with_state = _eval_jaxpr_with_state
@@ -210,7 +218,7 @@ def factor(log_factor, *, name=None):
 
 
 def _split_list(args, num_consts):
-  return jax.util.split_list(args, [num_consts])[1]
+  return args[num_consts:]
 
 
 def substitute_rule(state, *args, **kwargs):
