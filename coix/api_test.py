@@ -16,8 +16,8 @@
 
 import coix
 import jax
-import jax.numpy as jnp
 from jax import random
+import jax.numpy as jnp
 import numpy as np
 import numpyro
 import numpyro.distributions as dist
@@ -47,7 +47,6 @@ def test_extend():
 
   def f(key, x):
     return (numpyro.sample("z", dist.Normal(x, 1), rng_key=key),)
-
 
   def g(z):
     return z + 1
@@ -92,7 +91,9 @@ def test_propose():
   with np.testing.assert_raises(AssertionError):
     np.testing.assert_allclose(metrics["log_density"], 0.0)
 
-  vmap = lambda p: numpyro.handlers.plate("N", 3)(p)
+  def vmap(p):
+    return numpyro.handlers.plate("N", 3)(p)
+
   particle_program = coix.propose(vmap(coix.extend(p, f)), vmap(q))
   particle_out = particle_program(key)
   assert isinstance(particle_out, tuple) and len(particle_out) == 2

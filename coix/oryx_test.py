@@ -16,17 +16,18 @@
 
 import coix
 import coix.core
+
+try:
+  import coix.oryx as coryx
+except (ModuleNotFoundError, ImportError):
+  import pytest
+
+  pytest.skip("oryx backend is broken", allow_module_level=True)
 import jax
 from jax import random
 import jax.numpy as jnp
 import numpy as np
 import numpyro.distributions as dist
-import pytest
-
-try:
-    import coix.oryx as coryx
-except:
-    pytest.skip("oryx backend is broken", allow_module_level=True)
 
 coix.set_backend("coix.oryx")
 

@@ -17,7 +17,6 @@
 import functools
 
 import coix
-import jax
 from jax import random
 import jax.numpy as jnp
 import numpy as np
@@ -38,7 +37,10 @@ scale_x = np.sqrt(1 / precision_x)
 precision_q = precision_p + num_data * precision_x
 loc_q = (data.sum(0) * precision_x + loc_p * precision_p) / precision_q
 log_scale_q = -0.5 * np.log(precision_q)
-vmap = lambda p: numpyro.handlers.plate("N", 5)(p)
+
+
+def vmap(p):
+  return numpyro.handlers.plate("N", 5)(p)
 
 
 def model(params, key):
@@ -54,7 +56,9 @@ def guide(params, key, *args):
   del args
   key, _ = random.split(key)  # split here to test tie_in
   scale_q = jnp.exp(params["log_scale_q"])
-  z = numpyro.sample("z", dist.Normal(params["loc_q"], scale_q).to_event(), rng_key=key)
+  z = numpyro.sample(
+      "z", dist.Normal(params["loc_q"], scale_q).to_event(), rng_key=key
+  )
   return z
 
 
