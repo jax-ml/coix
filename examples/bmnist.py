@@ -292,14 +292,12 @@ def kernel_what(network, inputs, T=10):
 def make_bmnist(params, bmnist_net, T=10, num_sweeps=5, num_particles=10):
   network = coix.util.BindModule(bmnist_net, params)
   # Add particle dimension and construct a program.
-  make_particle_plate = lambda: numpyro.plate("particle", num_particles, dim=-2)
-  target = make_particle_plate()(partial(bmnist_target, network, D=2, T=T))
+  vmap = lambda p: numpyro.plate("particle", num_particles, dim=-2)(p)
+  target = vmap(partial(bmnist_target, network, D=2, T=T))
   kernels = []
   for t in range(T):
-    kernels.append(
-        make_particle_plate()(partial(kernel_where, network, D=2, t=t))
-    )
-  kernels.append(make_particle_plate()(partial(kernel_what, network, T=T)))
+    kernels.append(vmap(partial(kernel_where, network, D=2, t=t)))
+  kernels.append(vmap(partial(kernel_what, network, T=T)))
   program = coix.algo.apgs(target, kernels, num_sweeps=num_sweeps)
   return program
 

@@ -145,16 +145,10 @@ def anneal_reverse(network, inputs, k=0):
 def make_anneal(params, unroll=False, num_particles=10):
   network = coix.util.BindModule(AnnealNetwork(), params)
   # Add particle dimension and construct a program.
-  make_particle_plate = lambda: numpyro.plate("particle", num_particles, dim=-1)
-  targets = lambda k: make_particle_plate()(
-      partial(anneal_target, network, k=k)
-  )
-  forwards = lambda k: make_particle_plate()(
-      partial(anneal_forward, network, k=k)
-  )
-  reverses = lambda k: make_particle_plate()(
-      partial(anneal_reverse, network, k=k)
-  )
+  vmap = lambda p: numpyro.plate("particle", num_particles, dim=-1)(p)
+  targets = lambda k: vmap(partial(anneal_target, network, k=k))
+  forwards = lambda k: vmap(partial(anneal_forward, network, k=k))
+  reverses = lambda k: vmap(partial(anneal_reverse, network, k=k))
   if unroll:  # to unroll the algorithm, we provide a list of programs
     targets = [targets(k) for k in range(8)]
     forwards = [forwards(k) for k in range(7)]

@@ -211,10 +211,10 @@ def gmm_kernel_c(network, inputs):
 def make_gmm(params, num_sweeps, num_particles):
   network = coix.util.BindModule(GMMEncoder(), params)
   # Add particle dimension and construct a program.
-  make_particle_plate = lambda: numpyro.plate("particle", num_particles, dim=-3)
-  target = make_particle_plate()(gmm_target)
-  kernel_mean_tau = make_particle_plate()(partial(gmm_kernel_mean_tau, network))
-  kernel_c = make_particle_plate()(partial(gmm_kernel_c, network))
+  vmap = lambda p: numpyro.plate("particle", num_particles, dim=-3)(p)
+  target = vmap(gmm_target)
+  kernel_mean_tau = vmap(partial(gmm_kernel_mean_tau, network))
+  kernel_c = vmap(partial(gmm_kernel_c, network))
   kernels = [kernel_mean_tau, kernel_c]
   program = coix.algo.apgs(target, kernels, num_sweeps=num_sweeps)
   return program
