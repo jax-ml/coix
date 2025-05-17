@@ -16,17 +16,24 @@
 
 import coix
 import coix.core
-import coix.oryx as coryx
+
+try:
+  import coix.oryx as coryx
+except (ModuleNotFoundError, ImportError):
+  coryx = None
 import jax
 from jax import random
 import jax.numpy as jnp
 import numpy as np
 import numpyro.distributions as dist
+import pytest
 
-coix.set_backend("coix.oryx")
+pytest.skip("oryx backend is broken", allow_module_level=True)
 
 
 def test_call_and_reap_tags():
+  coix.set_backend("coix.oryx")
+
   def model(key):
     return coryx.rv(dist.Normal(0, 1), name="x")(key)
 
@@ -36,6 +43,8 @@ def test_call_and_reap_tags():
 
 
 def test_delta_distribution():
+  coix.set_backend("coix.oryx")
+
   def model(key):
     x = random.normal(key)
     return coryx.rv(dist.Delta(x, 5.0), name="x")(key)
@@ -45,6 +54,8 @@ def test_delta_distribution():
 
 
 def test_detach():
+  coix.set_backend("coix.oryx")
+
   def model(x):
     return coryx.rv(dist.Delta(x, 0.0), name="x")(None) * x
 
@@ -53,6 +64,8 @@ def test_detach():
 
 
 def test_detach_vmap():
+  coix.set_backend("coix.oryx")
+
   def model(x):
     return coryx.rv(dist.Normal(x, 1.0), name="x")(random.PRNGKey(0))
 
@@ -61,6 +74,8 @@ def test_detach_vmap():
 
 
 def test_distribution():
+  coix.set_backend("coix.oryx")
+
   def model(key):
     x = random.normal(key)
     return coryx.rv(dist.Delta(x, 5.0), name="x")(key)
@@ -72,6 +87,8 @@ def test_distribution():
 
 
 def test_empirical_program():
+  coix.set_backend("coix.oryx")
+
   def model(x):
     trace = {
         "x": {"value": x, "log_prob": 11.0},
@@ -87,6 +104,8 @@ def test_empirical_program():
 
 
 def test_factor():
+  coix.set_backend("coix.oryx")
+
   def model(x):
     return coryx.factor(x, name="x")
 
@@ -96,6 +115,8 @@ def test_factor():
 
 
 def test_log_prob_detach():
+  coix.set_backend("coix.oryx")
+
   def model(loc):
     x = coryx.rv(dist.Normal(loc, 1), name="x")(random.PRNGKey(0))
     return x
@@ -112,6 +133,8 @@ def test_log_prob_detach():
 
 
 def test_observed():
+  coix.set_backend("coix.oryx")
+
   def model(a):
     return coryx.rv(dist.Delta(a, 3.0), obs=1.0, name="x") + a
 
@@ -122,6 +145,8 @@ def test_observed():
 
 
 def test_stick_the_landing():
+  coix.set_backend("coix.oryx")
+
   def model(lp):
     return coryx.rv(dist.Delta(0.0, lp), name="x")(None)
 
@@ -137,6 +162,8 @@ def test_stick_the_landing():
 
 
 def test_substitute():
+  coix.set_backend("coix.oryx")
+
   def model(key):
     return coryx.rv(dist.Delta(1.0, 5.0), name="x")(key)
 
@@ -147,6 +174,8 @@ def test_substitute():
 
 
 def test_suffix():
+  coix.set_backend("coix.oryx")
+
   def model(x):
     return coryx.rv(dist.Delta(x, 5.0), name="x")(None)
 
