@@ -234,10 +234,10 @@ def dmm_kernel_c_h(network, inputs):
 def make_dmm(params, num_sweeps=5, num_particles=10):
   network = coix.util.BindModule(DMMAutoEncoder(), params)
   # Add particle dimension and construct a program.
-  make_particle_plate = lambda: numpyro.plate("particle", num_particles, dim=-3)
-  target = make_particle_plate()(partial(dmm_target, network))
-  kernel_mu = make_particle_plate()(partial(dmm_kernel_mu, network))
-  kernel_c_h = make_particle_plate()(partial(dmm_kernel_c_h, network))
+  vmap = lambda p: numpyro.plate("particle", num_particles, dim=-3)(p)
+  target = vmap(partial(dmm_target, network))
+  kernel_mu = vmap(partial(dmm_kernel_mu, network))
+  kernel_c_h = vmap(partial(dmm_kernel_c_h, network))
   kernels = [kernel_mu, kernel_c_h]
   program = coix.algo.apgs(target, kernels, num_sweeps=num_sweeps)
   return program

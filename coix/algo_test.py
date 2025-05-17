@@ -17,15 +17,15 @@
 import functools
 
 import coix
-import coix.oryx as coryx
 import jax
 from jax import random
 import jax.numpy as jnp
 import numpy as np
+import numpyro
 import numpyro.distributions as dist
 import optax
 
-coix.set_backend("coix.oryx")
+coix.set_backend("coix.numpyro")
 
 np.random.seed(0)
 num_data, dim = 4, 2
@@ -38,14 +38,15 @@ scale_x = np.sqrt(1 / precision_x)
 precision_q = precision_p + num_data * precision_x
 loc_q = (data.sum(0) * precision_x + loc_p * precision_p) / precision_q
 log_scale_q = -0.5 * np.log(precision_q)
+vmap = lambda p: numpyro.handlers.plate("N", 5)(p)
 
 
 def model(params, key):
   del params
   key_z, key_next = random.split(key)
-  z = coryx.rv(dist.Normal(loc_p, scale_p), name="z")(key_z)
-  z = jnp.broadcast_to(z, (num_data, dim))
-  x = coryx.rv(dist.Normal(z, scale_x), obs=data, name="x")
+  z = numpyro.sample("z", dist.Normal(loc_p, scale_p).to_event(), rng_key=key_z)
+  z = jnp.repeat(z[..., None, :], num_data, axis=-2)
+  x = numpyro.sample("x", dist.Normal(z, scale_x).to_event(2), obs=data)
   return key_next, z, x
 
 
@@ -53,18 +54,18 @@ def guide(params, key, *args):
   del args
   key, _ = random.split(key)  # split here to test tie_in
   scale_q = jnp.exp(params["log_scale_q"])
-  z = coryx.rv(dist.Normal(params["loc_q"], scale_q), name="z")(key)
+  z = numpyro.sample("z", dist.Normal(params["loc_q"], scale_q).to_event(), rng_key=key)
   return z
 
 
 def check_ess(make_program):
   params = {"loc_q": loc_q, "log_scale_q": log_scale_q}
-  p = jax.vmap(functools.partial(model, params))
-  q = jax.vmap(functools.partial(guide, params))
+  p = vmap(functools.partial(model, params))
+  q = vmap(functools.partial(guide, params))
   program = make_program(p, q)
 
-  keys = random.split(random.PRNGKey(0), 5)
-  ess = coix.traced_evaluate(program)(keys)[2]["ess"]
+  key = random.PRNGKey(0)
+  ess = coix.traced_evaluate(program)(key)[2]["ess"]
   np.testing.assert_allclose(ess, 5.0)
 
 
@@ -72,12 +73,11 @@ def run_inference(make_program, num_steps=1000):
   """Performs inference given an algorithm `make_program`."""
 
   def loss_fn(params, key):
-    p = jax.vmap(functools.partial(model, params))
-    q = jax.vmap(functools.partial(guide, params))
+    p = vmap(functools.partial(model, params))
+    q = vmap(functools.partial(guide, params))
     program = make_program(p, q)
 
-    keys = random.split(key, 5)
-    metrics = coix.traced_evaluate(program)(keys)[2]
+    metrics = coix.traced_evaluate(program)(key)[2]
     return metrics["loss"], metrics
 
   init_params = {

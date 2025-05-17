@@ -15,24 +15,25 @@
 """Tests for api.py."""
 
 import coix
-import coix.oryx as coryx
 import jax
+import jax.numpy as jnp
 from jax import random
 import numpy as np
+import numpyro
 import numpyro.distributions as dist
 import pytest
 
-coix.set_backend("coix.oryx")
+coix.set_backend("coix.numpyro")
 
 
 def test_compose():
   def p(key):
     key, subkey = random.split(key)
-    x = coryx.rv(dist.Normal(0, 1), name="x")(subkey)
+    x = numpyro.sample("x", dist.Normal(0, 1), rng_key=subkey)
     return key, x
 
   def f(key, x):
-    return coryx.rv(dist.Normal(x, 1), name="z")(key)
+    return numpyro.sample("z", dist.Normal(x, 1), rng_key=key)
 
   _, p_trace, _ = coix.traced_evaluate(coix.compose(f, p))(random.PRNGKey(0))
   assert set(p_trace.keys()) == {"x", "z"}
@@ -41,11 +42,12 @@ def test_compose():
 def test_extend():
   def p(key):
     key, subkey = random.split(key)
-    x = coryx.rv(dist.Normal(0, 1), name="x")(subkey)
+    x = numpyro.sample("x", dist.Normal(0, 1), rng_key=subkey)
     return key, x
 
   def f(key, x):
-    return (coryx.rv(dist.Normal(x, 1), name="z")(key),)
+    return (numpyro.sample("z", dist.Normal(x, 1), rng_key=key),)
+
 
   def g(z):
     return z + 1
@@ -72,14 +74,14 @@ def test_extend():
 def test_propose():
   def p(key):
     key, subkey = random.split(key)
-    x = coryx.rv(dist.Normal(0, 1), name="x")(subkey)
+    x = numpyro.sample("x", dist.Normal(0, 1), rng_key=subkey)
     return key, x
 
   def f(key, x):
-    return coryx.rv(dist.Normal(x, 1), name="z")(key)
+    return numpyro.sample("z", dist.Normal(x, 1), rng_key=key)
 
   def q(key):
-    return coryx.rv(dist.Normal(1, 2), name="x")(key)
+    return numpyro.sample("x", dist.Normal(1, 2), rng_key=key)
 
   program = coix.propose(coix.extend(p, f), q)
   key = random.PRNGKey(0)
@@ -90,38 +92,38 @@ def test_propose():
   with np.testing.assert_raises(AssertionError):
     np.testing.assert_allclose(metrics["log_density"], 0.0)
 
-  particle_program = coix.propose(jax.vmap(coix.extend(p, f)), jax.vmap(q))
-  keys = random.split(key, 3)
-  particle_out = particle_program(keys)
+  vmap = lambda p: numpyro.handlers.plate("N", 3)(p)
+  particle_program = coix.propose(vmap(coix.extend(p, f)), vmap(q))
+  particle_out = particle_program(key)
   assert isinstance(particle_out, tuple) and len(particle_out) == 2
-  assert particle_out[0].shape == keys.shape
+  assert particle_out[1].shape == (3,)
 
 
 def test_resample():
   def q(key):
-    return coryx.rv(dist.Normal(1, 2), name="x")(key)
+    return numpyro.sample("x", dist.Normal(1, 2), rng_key=key)
 
-  particle_program = jax.vmap(q)
-  keys = random.split(random.PRNGKey(0), 3)
-  particle_out = coix.resample(particle_program)(keys)
+  particle_program = numpyro.handlers.plate("N", 3)(q)
+  key = random.PRNGKey(0)
+  particle_out = coix.resample(particle_program)(key)
   assert particle_out.shape == (3,)
 
 
 def test_resample_one():
   def q(key):
-    x = coryx.rv(dist.Normal(1, 2), name="x")(key)
-    return coryx.rv(dist.Normal(x, 1), name="z", obs=0.0)
+    x = numpyro.sample("x", dist.Normal(1, 2), rng_key=key)
+    return numpyro.sample("z", dist.Normal(x, 1), obs=0.0)
 
-  particle_program = jax.vmap(q)
-  keys = random.split(random.PRNGKey(0), 3)
-  particle_out = coix.resample(particle_program, num_samples=())(keys)
-  assert not particle_out.shape
+  particle_program = numpyro.handlers.plate("N", 3)(q)
+  key = random.PRNGKey(0)
+  particle_out = coix.resample(particle_program, num_samples=())(key)
+  assert not jnp.shape(particle_out)
 
 
 def test_fori_loop():
   def drift(key, x):
     key_out, key = random.split(key)
-    x_new = coryx.rv(dist.Normal(x, 1.0), name="x")(key)
+    x_new = numpyro.sample("x", dist.Normal(x, 1.0), rng_key=key)
     return key_out, x_new
 
   compile_time = {"value": 0}
@@ -146,12 +148,12 @@ def test_fori_loop():
 @pytest.mark.skip(reason="Currently, we only support memoised lists.")
 def test_memoize():
   def model(key):
-    x = coryx.rv(dist.Normal(0, 1), name="x")(key)
-    y = coryx.rv(dist.Normal(x, 1), name="y", obs=0.0)
+    x = numpyro.sample("x", dist.Normal(0, 1), rng_key=key)
+    y = numpyro.sample("y", dist.Normal(x, 1), obs=0.0)
     return x, y
 
   def guide(key):
-    return coryx.rv(dist.Normal(1, 2), name="x")(key)
+    return numpyro.sample("x", dist.Normal(1, 2), rng_key=key)
 
   def vmodel(key):
     return jax.vmap(model)(random.split(key, 5))
