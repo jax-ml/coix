@@ -17,6 +17,7 @@
 import coix
 import coix.core
 
+# pylint: disable=g-import-not-at-top
 try:
   import coix.oryx as coryx
 except (ModuleNotFoundError, ImportError):
