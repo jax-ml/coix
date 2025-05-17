@@ -18,7 +18,7 @@ import coix
 import coix.core
 
 try:
-  import coix.oryx as coryx
+  import coix.oryx as coryx  # pylint: disable=g-import-not-at-top
 except (ModuleNotFoundError, ImportError):
   coryx = None
 import jax
