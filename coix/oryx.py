@@ -52,12 +52,12 @@ RANDOM_VARIABLE = ppl.RANDOM_VARIABLE
 
 ALL_TAGS = (RANDOM_VARIABLE, OBSERVED, DISTRIBUTION, METRIC)
 
-T = TypeVar('T')
+T = TypeVar("T")
+
 
 def safe_map(f: Callable[..., T], *args: Iterable[Any]) -> list[T]:
   """Like map(), but checks argument lengths and returns a list."""
   return [f(*a) for a in zip(*args, strict=True)]
-
 
 ########################################
 # Override Oryx behaviors
